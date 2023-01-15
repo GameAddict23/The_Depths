@@ -2,8 +2,8 @@ import pygame
 from Settings import *
 from Level import Level
 from SpriteSheet import *
-from Geometry import *
 from Player import Revised
+from Enemies import Skeleton
 
 pygame.init()
 
@@ -51,6 +51,11 @@ fall_frames_right = fall_frames_right.get_images()
 
 fall_frames_left = [pygame.transform.flip(x, True, False) for x in fall_frames_right]
 
+attack_frames_right = spritesheet(spritesheet=pygame.image.load("Mobs/Colour1/Outline/120x80_PNGSheets/_Attack.png"), width=120, height=80, frames=4)
+attack_frames_right = attack_frames_right.get_images()
+
+attack_frames_left = [pygame.transform.flip(x, True, False) for x in attack_frames_right]
+
 background = pygame.Surface((64, 64))
 background_img = pygame.image.load("Enviroment/walls_far.png")
 background.blit(background_img, (0, 0), ((310, 192), (64, 64)))
@@ -85,20 +90,27 @@ for i in range(4, 5):
 row = 16
 for i in range(len(level_map[row])-3):
     if not(56 <= i < 61):
+    # if not(14 <= i < 17):
         level_map[row][i] = 1
 level_map[row][len(level_map[row])-3] = 2
 
 for i in range(14, 16):
     level_map[i][20] = 3
+    level_map[i][50] = 3
 
 row = 24
 for i in range(len(level_map[row])-3):
     if not(14 <= i < 17):
         level_map[row][i] = 1
+
 level_map[row][len(level_map[row])-3] = 2
 
 row = 23
 for i in range(25, 35):
+    level_map[row][i] = 3
+
+row = 40
+for i in range(10, 50):
     level_map[row][i] = 1
 
 dont_check: list[bool] = []
@@ -122,7 +134,7 @@ def move_tiles(index: int, row: int, tiles: tuple[int], endpoints: tuple[int]):
         level.original_hitboxes[row][tile].y += speed
         if player.on_tile(level, row, tile):
             player_on_tile = True
-    if player_on_tile and SCREEN_HEIGHT*0.45 < player.hitbox.center[1] < SCREEN_HEIGHT*0.6 and -SCREEN_HEIGHT <= shift_y-speed <= 0:
+    if player_on_tile and player.hitbox.center[1] > SCREEN_HEIGHT*0.45 and (speed < 0 and player.hitbox.center[1] < SCREEN_HEIGHT*0.6 or speed > 0 and player.hitbox.center[1]-5 < SCREEN_HEIGHT*0.6) and -SCREEN_HEIGHT <= shift_y-speed <= 0:
         shift_y -= speed
 
 def convert_map(array: list[list[int]]):
@@ -147,7 +159,29 @@ tile_types = [
 
 level = Level(mapped_tiles=level_map, name="Demo", tile_types=tile_types)
 
-player = Revised(velocity=[3, 4], framesUP = None, framesDOWN = None, framesLEFT = walking_animation_left, framesRIGHT = walking_animation_right, framesIDLE_r = idle_animation_right, framesIDLE_l = idle_animation_left, framesJUMP_l=jump_frames_left, framesJUMP_r=jump_frames_right, framesFALL_l=fall_frames_left, framesFALL_r=fall_frames_right, width=35, height=80, starting_pos=(0, 10*tile_height), offset_x = 42.5, offset_y = 40, offset_width = -11, offset_height = -40)
+player = Revised(
+        velocity=[3, 4],
+        framesUP = None,
+        framesDOWN = None,
+        framesLEFT = walking_animation_left,
+        framesRIGHT = walking_animation_right,
+        framesIDLE_r = idle_animation_right,
+        framesIDLE_l = idle_animation_left,
+        framesJUMP_l=jump_frames_left,
+        framesJUMP_r=jump_frames_right,
+        framesFALL_l=fall_frames_left,
+        framesFALL_r=fall_frames_right,
+        framesATTACK_l=attack_frames_left,
+        framesATTACK_r=attack_frames_right,
+        width=35,
+        height=80,
+        starting_pos=(0, 10*tile_height),
+        offset_x = 42.5, offset_y = 40,
+        offset_width = -11,
+        offset_height = -40
+        )
+
+skeletons = [Skeleton(starting_pos=(30*tile_width, 10*tile_height)), Skeleton(starting_pos=(30*tile_width, 15*tile_height)), Skeleton(starting_pos=(50*tile_width, 30*tile_height))]
 
 run = True
 timer = pygame.time.get_ticks()
@@ -158,14 +192,8 @@ while run:
             case pygame.QUIT:
                 run = False
 
-    if player.hitbox.top > SCREEN_HEIGHT or player.hitbox.right < 0 or player.hitbox.left > SCREEN_WIDTH:
-        shift_x = 0
-        shift_y = 0
-        player.dead = True
-    player.return_to_start()
-
     for x in range(int(SCREEN_HEIGHT/64)*2+2):
-        for i in range(2*int(SCREEN_WIDTH/64)):
+        for i in range(2*int(SCREEN_WIDTH/64)+2):
             screen.blit(background, (64*i+shift_x, 64*x+shift_y))
 
     for i in range(0, int(SCREEN_WIDTH/5), 2):
@@ -173,18 +201,13 @@ while run:
 
     keys = pygame.key.get_pressed()
 
-    if keys[pygame.K_d]:
-        shift_x = 0
-        shift_y = 0
-        player.dead = True
-    player.return_to_start()
-
     if SCREEN_WIDTH*0.5 <= player.hitbox.center[0] <= SCREEN_WIDTH*0.6:
-        player.scrolling_x = not(shift_x >= 0 or shift_x <= -SCREEN_WIDTH)
-        if not(player.detect_right_collision(level)) and (keys[pygame.K_RIGHT]) and shift_x-player.velocity[0] >= -SCREEN_WIDTH:
-            shift_x -= player.velocity[0]
-        elif not(player.detect_left_collision(level)) and (keys[pygame.K_LEFT]) and shift_x+player.velocity[0] <= 0:
-            shift_x += player.velocity[0]
+        player.scrolling_x = not(shift_x+player.velocity[0] >= 0 or shift_x-player.velocity[0] <= -SCREEN_WIDTH)
+        if not(player.attacking):
+            if not(player.detect_right_collision(level)) and keys[pygame.K_RIGHT] and shift_x-player.velocity[0] >= -SCREEN_WIDTH:
+                shift_x -= player.velocity[0]
+            elif not(player.detect_left_collision(level)) and (keys[pygame.K_LEFT]) and shift_x+player.velocity[0] <= 0:
+                shift_x += player.velocity[0]
     else:
         player.scrolling_x = False
 
@@ -206,12 +229,28 @@ while run:
     # print(f"{player.falling_momentum, player.scrolling_y, player.hitbox.center}")
     # print(f"{player.falling_momentum, shift_y-player.falling_momentum >= -SCREEN_HEIGHT}")
     move_tiles(0, 16, [i for i in range(14, 17)], (24*tile_height+5+shift_y, 17*tile_height+shift_y))
+    move_tiles(1, 40, [i for i in range(20, 25)], (55*tile_height+5+shift_y, 35*tile_height+shift_y))
 
     level.update_hitboxes(shift_x, shift_y)
 
     level.render()
-    draw_hitboxes()
-    player.move(level, shift_y, right=keys[pygame.K_RIGHT], left=keys[pygame.K_LEFT], jump=keys[pygame.K_SPACE])
+    # draw_hitboxes()
+    player.move(level, right=keys[pygame.K_RIGHT], left=keys[pygame.K_LEFT], jump=keys[pygame.K_SPACE], attack=keys[pygame.K_a], enemy_list=skeletons)
+
+    for skeleton in skeletons:
+        if skeleton.dead:
+            skeletons.pop(skeletons.index(skeleton))
+        skeleton.move(level, shift_x, shift_y, player)
+        # skeleton.draw_hitbox()
+
+    player.render_health_bar()
+    if player.dead:
+        shift_x = 0
+        shift_y = 0
+    elif keys[pygame.K_d]:
+        shift_x = 0
+        shift_y = 0
+        player.die()
 
     # print(f"falling: {player.falling}")
 
@@ -231,6 +270,6 @@ while run:
 
     clock.tick(60)
 
-    print(round(clock.get_fps()))
+    # print(round(clock.get_fps()))
 
 pygame.quit()
