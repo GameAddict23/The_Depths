@@ -1,3 +1,9 @@
+# Table of Contents
+[The Depths](https://github.com/GameAddict23/The_Depths/blob/master/README.md#the_depths)
+[Movement](https://github.com/GameAddict23/The_Depths/blob/master/README.md#movement)
+[Combat](https://github.com/GameAddict23/The_Depths/blob/master/README.md#combat)
+[Levels](https://github.com/GameAddict23/The_Depths/blob/master/README.md#levels)
+
 # The Depths
 This is a 2D platformer game I am making with the Pygame module. 
 
