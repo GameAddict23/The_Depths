@@ -1,5 +1,5 @@
 # Table of Contents
-[The Depths](https://github.com/GameAddict23/The_Depths/blob/master/README.md#the_depths)
+[The Depths](https://github.com/GameAddict23/The_Depths/blob/master/README.md#the-depths)
 
 [Movement](https://github.com/GameAddict23/The_Depths/blob/master/README.md#movement)
 
