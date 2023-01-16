@@ -69,7 +69,7 @@ class Skeleton():
         self.shift_x = 0
         self.shift_y = 0
 
-        self.health = 100
+        self.health = 150
         self.damage = 25
 
     def die(self):
@@ -272,7 +272,7 @@ class Skeleton():
                 else:
                     self.left = True
 
-                if not(self.falling) and self.left and self.collide_left(player.hitbox) or not(self.left) and self.collide_right(player.hitbox):
+                if not(self.falling) and not(player.dying) and self.left and self.collide_left(player.hitbox) or not(self.left) and self.collide_right(player.hitbox):
                     self.attacking = True
             else:
                 self.attack(player)
@@ -281,6 +281,7 @@ class Skeleton():
         self.animate()
 
     def take_damage(self, amount):
+        print(self.attack_animation_counter)
         self.hit = True
         self.attacking = False
         self.attack_animation_counter = 0

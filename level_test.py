@@ -51,10 +51,20 @@ fall_frames_right = fall_frames_right.get_images()
 
 fall_frames_left = [pygame.transform.flip(x, True, False) for x in fall_frames_right]
 
-attack_frames_right = spritesheet(spritesheet=pygame.image.load("Mobs/Colour1/Outline/120x80_PNGSheets/_Attack.png"), width=120, height=80, frames=4)
+attack_frames_right = spritesheet(spritesheet=pygame.image.load("Mobs/Colour1/Outline/120x80_PNGSheets/_AttackNoMovement.png"), width=120, height=80, frames=4)
 attack_frames_right = attack_frames_right.get_images()
 
 attack_frames_left = [pygame.transform.flip(x, True, False) for x in attack_frames_right]
+
+hit_frames_right = spritesheet(spritesheet=pygame.image.load("Mobs/Colour1/Outline/120x80_PNGSheets/_Hit.png"), width=120, height=80, frames=1)
+hit_frames_right = hit_frames_right.get_images()
+
+hit_frames_left = [pygame.transform.flip(x, True, False) for x in hit_frames_right]
+
+dying_frames_right = spritesheet(spritesheet=pygame.image.load("Mobs/Colour1/Outline/120x80_PNGSheets/_Death.png"), width=120, height=80, frames=10)
+dying_frames_right = dying_frames_right.get_images()
+
+dying_frames_left = [pygame.transform.flip(x, True, False) for x in dying_frames_right]
 
 background = pygame.Surface((64, 64))
 background_img = pygame.image.load("Enviroment/walls_far.png")
@@ -173,6 +183,10 @@ player = Revised(
         framesFALL_r=fall_frames_right,
         framesATTACK_l=attack_frames_left,
         framesATTACK_r=attack_frames_right,
+        framesHIT_l=hit_frames_left,
+        framesHIT_r=hit_frames_right,
+        framesDYING_l=dying_frames_left,
+        framesDYING_r=dying_frames_right,
         width=35,
         height=80,
         starting_pos=(0, 10*tile_height),

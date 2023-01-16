@@ -77,6 +77,10 @@ class Revised():
     framesFALL_r: list[pygame.Surface]
     framesATTACK_l: list[pygame.Surface]
     framesATTACK_r: list[pygame.Surface]
+    framesHIT_l: list[pygame.Surface]
+    framesHIT_r: list[pygame.Surface]
+    framesDYING_l: list[pygame.Surface]
+    framesDYING_r: list[pygame.Surface]
     width: int
     height: int
     offset_x: int = 0
@@ -93,17 +97,23 @@ class Revised():
         self.attack_area = pygame.Rect((self.pos.x+self.offset_x, self.pos.y+self.offset_y), ((self.width+self.offset_width)*2, self.height+self.offset_height))
 
         self.last_updated = 0
+        self.last_updated_attack = 0
+        self.last_updated_hit = 0
         self.walking_counter = 0
         self.idle_counter = 0
         self.jump_animation_counter = 0
         self.fall_animation_counter = 0
         self.attack_animation_counter = 0
+        self.hit_animation_counter = 0
+        self.dying_animation_counter = 0
 
         self.left = False
         self.isIdle = True
         self.jumping = False
         self.falling = False
         self.attacking = False
+        self.hit = False
+        self.dying = False
         self.dead = False
         self.scrolling_x = False
         self.scrolling_y = False
@@ -117,6 +127,7 @@ class Revised():
         self.fell_at_time = 0
         self.count = 0
 
+        self.attack_cool_down = 0
         self.health = 100
         self.damage = 50
         self.health_bar_green = pygame.Rect((0, 0), (100*self.health*0.01, 10))
@@ -147,34 +158,49 @@ class Revised():
         self.attack_area.y = self.hitbox.y
 
     def update_counter(self):
+        if pygame.time.get_ticks() - self.last_updated_hit >= 150 and self.hit:
+            if self.hit_animation_counter+1 > len(self.framesHIT_l)-1:
+                self.hit_animation_counter = 0
+                self.hit = False
+            else:
+                self.hit_animation_counter += 1
+            self.last_updated_hit = pygame.time.get_ticks()
+
+        if pygame.time.get_ticks() - self.last_updated_attack >= 50 and self.attacking:
+            if self.attack_animation_counter+1 > len(self.framesATTACK_l)-1:
+                self.attack_animation_counter = 0
+                self.attacking = False
+            else:
+                self.attack_animation_counter += 1
+            self.last_updated_attack = pygame.time.get_ticks()
+
         if pygame.time.get_ticks() - self.last_updated >= 75:
-            if not(self.jumping) and not(self.falling) and not(self.isIdle) and not(self.attacking):
+            if self.jumping:
+                if self.jump_animation_counter+1 > len(self.framesJUMP_l)-1:
+                    self.jump_animation_counter = 0
+                else:
+                    self.jump_animation_counter += 1
+            elif self.isIdle:
+                if self.idle_counter+1 > len(self.framesIDLE_l)-1:
+                    self.idle_counter = 0
+                else:
+                    self.idle_counter += 1
+            elif self.falling:
+                if self.fall_animation_counter+1 > len(self.framesFALL_l)-1:
+                    self.fall_animation_counter = 0
+                else:
+                    self.fall_animation_counter += 1
+            elif self.dying:
+                if self.dying_animation_counter+1 > len(self.framesDYING_l)-1:
+                    self.dead = True
+                else:
+                    self.dying_animation_counter += 1
+            else:
                 if self.walking_counter+1 > len(self.framesLEFT)-1:
                     self.walking_counter = 0
                 else:
                     self.walking_counter += 1
-            else:
-                if self.jumping:
-                    if self.jump_animation_counter+1 > len(self.framesJUMP_l)-1:
-                        self.jump_animation_counter = 0
-                    else:
-                        self.jump_animation_counter += 1
-                elif self.isIdle:
-                    if self.idle_counter+1 > len(self.framesIDLE_l)-1:
-                        self.idle_counter = 0
-                    else:
-                        self.idle_counter += 1
-                elif self.attacking:
-                    if self.attack_animation_counter+1 > len(self.framesATTACK_l)-1:
-                        self.attack_animation_counter = 0
-                        self.attacking = False
-                    else:
-                        self.attack_animation_counter += 1
-                else:
-                    if self.fall_animation_counter+1 > len(self.framesFALL_l)-1:
-                        self.fall_animation_counter = 0
-                    else:
-                        self.fall_animation_counter += 1
+
             self.last_updated = pygame.time.get_ticks()
 
     def animate_walk(self):
@@ -216,8 +242,28 @@ class Revised():
 
         self.update_counter()
 
+    def animate_hit(self):
+        if self.left:
+            screen.blit(self.framesHIT_l[self.hit_animation_counter], (self.pos))
+        else:
+            screen.blit(self.framesHIT_r[self.hit_animation_counter], (self.pos))
+
+        self.update_counter()
+
+    def animate_dying(self):
+        if self.left:
+            screen.blit(self.framesDYING_l[self.dying_animation_counter], (self.pos))
+        else:
+            screen.blit(self.framesDYING_r[self.dying_animation_counter], (self.pos))
+
+        self.update_counter()
+
     def animate(self):
-        if self.isIdle:
+        if self.dying:
+            self.animate_dying()
+        elif self.hit:
+            self.animate_hit()
+        elif self.isIdle:
             self.animate_idle()
         elif self.jumping:
             self.animate_jump()
@@ -307,41 +353,44 @@ class Revised():
             self.falling = True
             self.fall(level)
 
-        if not(self.attacking):
-            if left:
-                if not(self.scrolling_x) and not(self.detect_left_collision(level)):
-                    self.pos.left -= self.velocity[0]
-                self.left = True
-                self.idle_counter = 0
-            elif right:
-                if not(self.scrolling_x) and not(self.detect_right_collision(level)):
-                    self.pos.right += self.velocity[0]
-                self.left = False
-                self.idle_counter = 0
+        if not(self.dying or self.hit):
+            if not(self.attacking):
+                if left:
+                    if not(self.scrolling_x or self.detect_left_collision(level)):
+                        self.pos.left -= self.velocity[0]
+                    self.left = True
+                    self.idle_counter = 0
+                elif right:
+                    if not(self.scrolling_x or self.detect_right_collision(level)):
+                        self.pos.right += self.velocity[0]
+                    self.left = False
+                    self.idle_counter = 0
 
-            if attack:
-                self.attacking = True
-                self.walking_counter = 0
-                self.idle_counter = 0
-                self.jump_animation_counter = 0
-                self.fall_animation_counter = 0
-                self.attack_animation_counter = 0
-            elif jump:
-                if self.detect_bottom_collision(level) and not(self.detect_top_collision(level)):
-                    self.jumping = True
+                if not(self.falling or self.jumping) and pygame.time.get_ticks() - self.attack_cool_down >= 150 and attack:
+                    self.attacking = True
                     self.walking_counter = 0
                     self.idle_counter = 0
                     self.jump_animation_counter = 0
                     self.fall_animation_counter = 0
-        elif self.attack_animation_counter == 2:
-            self.update_hitbox()
-            for enemy in enemy_list:
-                # print(self.attack_connected(enemy))
-                self.attack(enemy)
-            self.attack_animation_counter = 0
-            self.attacking = False
+                    self.attack_animation_counter = 0
+                    self.attack_cool_down = 0
+                elif jump:
+                    if self.detect_bottom_collision(level) and not(self.detect_top_collision(level)):
+                        self.jumping = True
+                        self.walking_counter = 0
+                        self.idle_counter = 0
+                        self.jump_animation_counter = 0
+                        self.fall_animation_counter = 0
+            elif self.attack_animation_counter+1 > len(self.framesATTACK_l)-1:
+                self.update_hitbox()
+                for enemy in enemy_list:
+                    # print(self.attack_connected(enemy))
+                    self.attack(enemy)
+                self.attack_animation_counter = 0
+                self.attacking = False
+                self.attack_cool_down = pygame.time.get_ticks()
 
-        self.isIdle = not(left or right) and not(self.attacking or self.jumping or self.falling)
+        self.isIdle = not(left or right) and not(self.attacking or self.jumping or self.falling or self.hit or self.dying)
 
         if self.isIdle:
             self.walking_counter = 0
@@ -359,20 +408,25 @@ class Revised():
         self.update_hitbox()
 
     def take_damage(self, amount):
+        self.hit = True
+        self.last_updated_hit = pygame.time.get_ticks()
         self.health -= amount
         if self.health <= 0:
             self.health = 0
-            self.dead = True
+            self.dying = True
 
     def die(self):
         self.return_to_start()
         self.dead = False
+        self.dying = False
+        self.dying_animation_counter = 0
         self.health = 100
 
     def attack_connected(self, enemy):
         if enemy.collide_right(self.attack_area) or enemy.collide_left(self.attack_area):
             # print("ATTACKING")
             return True
+        print(enemy.attack_animation_counter)
         return False
 
     def attack(self, enemy):
