@@ -2,6 +2,7 @@ import pygame
 from dataclasses import dataclass
 from Settings import *
 from Level import *
+from Fireball import Fireball
 
 @dataclass
 class Player():
@@ -127,19 +128,29 @@ class Revised():
         self.fell_at_time = 0
         self.count = 0
 
-        self.attack_cool_down = 0
-        self.health = 100
+        self.unlocked_fireballs = False
+        self.fireballs = []
+        self.fireball_limit = 2
+        self.fireball_cooldown = 1000
+        self.last_fired = 0
+        self.attack_cooldown = 200
+        self.last_attacked = 0
+        self.max_health = 200
+        self.health = self.max_health
         self.damage = 50
-        self.health_bar_green = pygame.Rect((0, 0), (100*self.health*0.01, 10))
-        self.health_bar_red = pygame.Rect((self.health_bar_green.x+self.health_bar_green.width, self.health_bar_green.y), (100-self.health_bar_green.width, 10))
+        self.health_bar_green = pygame.Rect((0, 0), (self.health, 15))
+        self.health_bar_red = pygame.Rect((self.health_bar_green.x, self.health_bar_green.y), (self.max_health, self.health_bar_green.height))
 
-    def render_health_bar(self):
-        self.health_bar_green.width = 100*self.health*0.01
-        self.health_bar_red.width = 100-self.health_bar_green.width
-        self.health_bar_red.x = self.health_bar_green.x+self.health_bar_green.width
+    def render_hud(self):
+        self.health_bar_green.width = self.health
+        # self.health_bar_red.width = 100-self.health_bar_green.width
+        # self.health_bar_red.x = self.health_bar_green.x+self.health_bar_green.width
 
         pygame.draw.rect(screen, (255, 0, 0), self.health_bar_red)
         pygame.draw.rect(screen, (0, 255, 0), self.health_bar_green)
+
+        for i in range(self.fireball_limit-len(self.fireballs)):
+            pygame.draw.circle(screen, (255, 0, 0), (15+25*i, self.health_bar_green.height+15), 10)
 
     def return_to_start(self):
         self.pos.x, self.pos.y = self.starting_pos
@@ -174,7 +185,7 @@ class Revised():
                 self.attack_animation_counter += 1
             self.last_updated_attack = pygame.time.get_ticks()
 
-        if pygame.time.get_ticks() - self.last_updated >= 75:
+        if pygame.time.get_ticks() - self.last_updated >= 60:
             if self.jumping:
                 if self.jump_animation_counter+1 > len(self.framesJUMP_l)-1:
                     self.jump_animation_counter = 0
@@ -317,26 +328,32 @@ class Revised():
         self.update_hitbox()
         if (hitbox.left <= self.hitbox.left <= hitbox.right or hitbox.left <= self.hitbox.right <= hitbox.right):
             if hitbox.top <= self.hitbox.bottom <= hitbox.center[1] or is_moving and hitbox.top-1 <= self.hitbox.bottom <= hitbox.center[1]:
-                # print(hitbox.top <= self.hitbox.bottom <= hitbox.bottom, movement_y)
-                # print("On ground!", self.hitbox.bottom, self.pos.bottom, hitbox.top, hitbox.bottom, [level.hitboxes.index(row), row.index(hitbox)])
                 self.hitbox.bottom = self.pos.bottom = hitbox.top
                 self.update_hitbox()
                 return True
         return False
 
-    def collide_right(self, hitbox):
+    def collide_right(self, hitbox, account_for_velocity=True):
         if self.hitbox.top <= hitbox.top and self.hitbox.bottom > hitbox.top or self.hitbox.bottom >= hitbox.bottom and self.hitbox.top < hitbox.bottom:
-            if (hitbox.left <= self.hitbox.right+self.velocity[0] <= hitbox.right):
-                return True
+            if account_for_velocity:
+                if (hitbox.left <= self.hitbox.right+self.velocity[0] <= hitbox.right):
+                    return True
+            else:
+                if (hitbox.left <= self.hitbox.right <= hitbox.right):
+                    return True
         return False
 
-    def collide_left(self, hitbox):
+    def collide_left(self, hitbox, account_for_velocity=True):
         if self.hitbox.bottom >= hitbox.bottom and self.hitbox.top < hitbox.bottom:
-            if (hitbox.left <= self.hitbox.left-self.velocity[0] <= hitbox.right):
-                return True
+            if account_for_velocity:
+                if (hitbox.left <= self.hitbox.left-self.velocity[0] <= hitbox.right):
+                    return True
+            else:
+                if (hitbox.left <= self.hitbox.left <= hitbox.right):
+                    return True
         return False
 
-    def move(self, level, right=False, left=False, jump=False, attack=False, enemy_list=[]):
+    def move(self, level, shift_x, shift_y, right=False, left=False, jump=False, attack=False, fire=False, enemy_list=[]):
         if self.dead:
             self.die()
 
@@ -366,14 +383,14 @@ class Revised():
                     self.left = False
                     self.idle_counter = 0
 
-                if not(self.falling or self.jumping) and pygame.time.get_ticks() - self.attack_cool_down >= 150 and attack:
+                if not(self.falling or self.jumping) and pygame.time.get_ticks() - self.last_attacked >= self.attack_cooldown and attack:
                     self.attacking = True
                     self.walking_counter = 0
                     self.idle_counter = 0
                     self.jump_animation_counter = 0
                     self.fall_animation_counter = 0
                     self.attack_animation_counter = 0
-                    self.attack_cool_down = 0
+                    self.last_attacked = 0
                 elif jump:
                     if self.detect_bottom_collision(level) and not(self.detect_top_collision(level)):
                         self.jumping = True
@@ -381,14 +398,33 @@ class Revised():
                         self.idle_counter = 0
                         self.jump_animation_counter = 0
                         self.fall_animation_counter = 0
+
+                if self.unlocked_fireballs and fire and len(self.fireballs) < self.fireball_limit and pygame.time.get_ticks() - self.last_fired >= self.fireball_cooldown:
+                    if self.left:
+                        self.fireballs.append(Fireball(starting_pos=(self.hitbox.x-self.width-shift_x, self.hitbox.y-10-shift_y), left=self.left))
+                    else:
+                        self.fireballs.append(Fireball(starting_pos=(self.hitbox.x-shift_x, self.hitbox.y-10-shift_y), left=self.left))
+                    self.last_fired = pygame.time.get_ticks()
             elif self.attack_animation_counter+1 > len(self.framesATTACK_l)-1:
-                self.update_hitbox()
                 for enemy in enemy_list:
-                    # print(self.attack_connected(enemy))
-                    self.attack(enemy)
+                    if self.attack_connected(enemy):
+                        enemy.take_damage(self.damage)
+                        break
                 self.attack_animation_counter = 0
                 self.attacking = False
-                self.attack_cool_down = pygame.time.get_ticks()
+                self.last_attacked = pygame.time.get_ticks()
+
+        x = 0
+        for f in range(len(self.fireballs)):
+            for e in range(len(enemy_list)):
+                if enemy_list[e].collide_left(self.fireballs[f-x].hitbox, account_for_velocity=False) or enemy_list[e].collide_right(self.fireballs[f-x].hitbox, account_for_velocity=False):
+                    enemy_list[e].take_damage(self.fireballs[f-x].damage)
+                    self.fireballs[f].expired = True
+            if self.fireballs[f-x].expired:
+                self.fireballs.pop(f-x)
+                x += 1
+            if x < self.fireball_limit-1:
+                self.fireballs[f-x].move(level, shift_x, shift_y)
 
         self.isIdle = not(left or right) and not(self.attacking or self.jumping or self.falling or self.hit or self.dying)
 
@@ -420,20 +456,15 @@ class Revised():
         self.dead = False
         self.dying = False
         self.dying_animation_counter = 0
-        self.health = 100
+        self.health = self.max_health
 
     def attack_connected(self, enemy):
-        if enemy.collide_right(self.attack_area) or enemy.collide_left(self.attack_area):
+        if enemy.collide_right(self.attack_area, account_for_velocity=False) or enemy.collide_left(self.attack_area, account_for_velocity=False):
             # print("ATTACKING")
             return True
-        print(enemy.attack_animation_counter)
         return False
 
-    def attack(self, enemy):
-        if self.attack_connected(enemy):
-            enemy.take_damage(self.damage)
-        else:
-            return
+    # def attack(self, enemy):
 
     def fall(self, level, boost=0):
         if self.falling:

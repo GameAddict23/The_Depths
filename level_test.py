@@ -3,7 +3,7 @@ from Settings import *
 from Level import Level
 from SpriteSheet import *
 from Player import Revised
-from Enemies import Skeleton
+from EnemyGenerator import EnemyGenerator
 
 pygame.init()
 
@@ -12,7 +12,7 @@ pygame.display.set_caption("The Depths")
 clock = pygame.time.Clock()
 
 tile_width, tile_height = 25, 25
-tileset = Tileset(pygame.image.load("Enviroment/ground.png"), tile_dimensions=(tile_width, tile_height))
+tileset = Tileset(pygame.image.load("Enviroment/ground.png").convert_alpha(), tile_dimensions=(tile_width, tile_height))
 
 def draw_grid():
     for i in range(int(SCREEN_WIDTH/tile_width)):
@@ -21,6 +21,8 @@ def draw_grid():
         pygame.draw.line(screen, (255, 255, 255), (0, i*tile_height), (SCREEN_WIDTH, i*tile_height))
 
 def draw_hitboxes():
+    global draw_level_hitboxes
+    draw_level_hitboxes = True
     player.draw_hitbox()
     # draws the borders for when vertical scrolling is activated
     pygame.draw.line(screen, (0, 200, 200), (0, SCREEN_HEIGHT*0.45), (SCREEN_WIDTH, SCREEN_HEIGHT*0.45), width=2)
@@ -31,48 +33,48 @@ def draw_hitboxes():
     pygame.draw.line(screen, (100, 100, 100), (player.hitbox.center[0], 0), (player.hitbox.center[0], SCREEN_HEIGHT))
     pygame.draw.line(screen, (0, 200, 200), (SCREEN_WIDTH*0.6, 0), (SCREEN_WIDTH*0.6, SCREEN_HEIGHT), width=2)
 
-jump_frames_right = spritesheet(spritesheet=pygame.image.load("Mobs/Colour1/Outline/120x80_PNGSheets/_Jump.png"), width=120, height=80, frames=3)
+jump_frames_right = spritesheet(spritesheet=pygame.image.load("Mobs/Colour1/Outline/120x80_PNGSheets/_Jump.png").convert(), width=120, height=80, frames=3)
 jump_frames_right = jump_frames_right.get_images()
 
 jump_frames_left = [pygame.transform.flip(x, True, False) for x in jump_frames_right]
 
-walking_animation_right = spritesheet(spritesheet=pygame.image.load("Mobs/Colour1/Outline/120x80_PNGSheets/_Run.png"), width=120, height=80, frames=10)
+walking_animation_right = spritesheet(spritesheet=pygame.image.load("Mobs/Colour1/Outline/120x80_PNGSheets/_Run.png").convert(), width=120, height=80, frames=10)
 walking_animation_right = walking_animation_right.get_images()
 
 walking_animation_left = [pygame.transform.flip(x, True, False) for x in walking_animation_right]
 
-idle_animation_right = spritesheet(spritesheet=pygame.image.load("Mobs/Colour1/Outline/120x80_PNGSheets/_Idle.png"), width=120, height=80, frames=10)
+idle_animation_right = spritesheet(spritesheet=pygame.image.load("Mobs/Colour1/Outline/120x80_PNGSheets/_Idle.png").convert(), width=120, height=80, frames=10)
 idle_animation_right = idle_animation_right.get_images()
 
 idle_animation_left = [pygame.transform.flip(x, True, False) for x in idle_animation_right]
 
-fall_frames_right = spritesheet(spritesheet=pygame.image.load("Mobs/Colour1/Outline/120x80_PNGSheets/_Fall.png"), width=120, height=80, frames=3)
+fall_frames_right = spritesheet(spritesheet=pygame.image.load("Mobs/Colour1/Outline/120x80_PNGSheets/_Fall.png").convert(), width=120, height=80, frames=3)
 fall_frames_right = fall_frames_right.get_images()
 
 fall_frames_left = [pygame.transform.flip(x, True, False) for x in fall_frames_right]
 
-attack_frames_right = spritesheet(spritesheet=pygame.image.load("Mobs/Colour1/Outline/120x80_PNGSheets/_AttackNoMovement.png"), width=120, height=80, frames=4)
+attack_frames_right = spritesheet(spritesheet=pygame.image.load("Mobs/Colour1/Outline/120x80_PNGSheets/_AttackNoMovement.png").convert(), width=120, height=80, frames=4)
 attack_frames_right = attack_frames_right.get_images()
 
 attack_frames_left = [pygame.transform.flip(x, True, False) for x in attack_frames_right]
 
-hit_frames_right = spritesheet(spritesheet=pygame.image.load("Mobs/Colour1/Outline/120x80_PNGSheets/_Hit.png"), width=120, height=80, frames=1)
+hit_frames_right = spritesheet(spritesheet=pygame.image.load("Mobs/Colour1/Outline/120x80_PNGSheets/_Hit.png").convert(), width=120, height=80, frames=1)
 hit_frames_right = hit_frames_right.get_images()
 
 hit_frames_left = [pygame.transform.flip(x, True, False) for x in hit_frames_right]
 
-dying_frames_right = spritesheet(spritesheet=pygame.image.load("Mobs/Colour1/Outline/120x80_PNGSheets/_Death.png"), width=120, height=80, frames=10)
+dying_frames_right = spritesheet(spritesheet=pygame.image.load("Mobs/Colour1/Outline/120x80_PNGSheets/_Death.png").convert(), width=120, height=80, frames=10)
 dying_frames_right = dying_frames_right.get_images()
 
 dying_frames_left = [pygame.transform.flip(x, True, False) for x in dying_frames_right]
 
 background = pygame.Surface((64, 64))
-background_img = pygame.image.load("Enviroment/walls_far.png")
+background_img = pygame.image.load("Enviroment/walls_far.png").convert_alpha()
 background.blit(background_img, (0, 0), ((310, 192), (64, 64)))
 # background = pygame.transform.scale(background, (SCREEN_WIDTH, SCREEN_HEIGHT))
 
 pillars = pygame.Surface((48, 128))
-pillars_img = pygame.image.load("Enviroment/env_objects.png")
+pillars_img = pygame.image.load("Enviroment/env_objects.png").convert_alpha()
 pillars.blit(pillars_img, (0, 0), ((208, 0), (48, 128)))
 pillars = pygame.transform.scale(pillars, (SCREEN_HEIGHT*2/3, SCREEN_HEIGHT*2))
 pillars.set_colorkey((0, 0, 0))
@@ -86,6 +88,10 @@ for i in range(len(level_map[0])):
 for i in range(len(level_map)):
     level_map[i][0] = 3
     level_map[i][len(level_map[0])-1] = 3
+
+row = 5
+level_map[row][3] = 3
+level_map[row][12] = 3
 
 row = 8
 for i in range(5, 10):
@@ -195,10 +201,13 @@ player = Revised(
         offset_height = -40
         )
 
-skeletons = [Skeleton(starting_pos=(30*tile_width, 10*tile_height)), Skeleton(starting_pos=(30*tile_width, 15*tile_height)), Skeleton(starting_pos=(50*tile_width, 30*tile_height))]
+skeleton_generator = EnemyGenerator(enemy_type="skeleton", limit=5, pos=(30*tile_width, 10*tile_height))
+goblin_generator = EnemyGenerator(enemy_type="goblin", limit=5, pos=(80*tile_width, 10*tile_height))
 
 run = True
-timer = pygame.time.get_ticks()
+# draw_level_hitboxes = False
+player.unlocked_fireballs = True
+# timer = pygame.time.get_ticks()
 shift_x, shift_y = 0, 0
 while run:
     for event in pygame.event.get():
@@ -209,6 +218,7 @@ while run:
     for x in range(int(SCREEN_HEIGHT/64)*2+2):
         for i in range(2*int(SCREEN_WIDTH/64)+2):
             screen.blit(background, (64*i+shift_x, 64*x+shift_y))
+    # screen.fill((0, 0, 0))
 
     for i in range(0, int(SCREEN_WIDTH/5), 2):
         screen.blit(pillars, ((SCREEN_WIDTH/5)*i+shift_x, shift_y))
@@ -249,15 +259,18 @@ while run:
 
     level.render()
     # draw_hitboxes()
-    player.move(level, right=keys[pygame.K_RIGHT], left=keys[pygame.K_LEFT], jump=keys[pygame.K_SPACE], attack=keys[pygame.K_a], enemy_list=skeletons)
+    player.move(level, shift_x, shift_y, right=keys[pygame.K_RIGHT], left=keys[pygame.K_LEFT], jump=keys[pygame.K_SPACE], attack=keys[pygame.K_a], fire=keys[pygame.K_f], enemy_list=skeleton_generator.enemies+goblin_generator.enemies)
 
-    for skeleton in skeletons:
-        if skeleton.dead:
-            skeletons.pop(skeletons.index(skeleton))
-        skeleton.move(level, shift_x, shift_y, player)
-        # skeleton.draw_hitbox()
+    skeleton_generator.main(level, shift_x, shift_y, player)
+    goblin_generator.main(level, shift_x, shift_y, player)
 
-    player.render_health_bar()
+    # for fireball in fireballs:
+    #     if fireball.hit:
+    #         fireballs.pop(fireballs.index(fireball))
+    #     fireball.move(level, shift_x, shift_y)
+    #     fireball.draw_hitbox()
+
+    player.render_hud()
     if player.dead:
         shift_x = 0
         shift_y = 0
