@@ -27,11 +27,9 @@ class Level():
         for row in self.mapped_tiles:
             for tile in row:
                 if type(tile) == tuple:
-                    # if self.moving_tiles[row_count][tile_count]:
-                        # screen.blit(tile[0], (self.hitboxes[row_count][tile_count].x-self.tile_types[tile[2]][0], self.hitboxes[row_count][tile_count].y-self.tile_types[tile[2]][1]+offset[1]))
                     screen.blit(tile[0], (self.hitboxes[row_count][tile_count].x-self.tile_types[tile[2]][0], self.hitboxes[row_count][tile_count].y-self.tile_types[tile[2]][1]))
                     if draw_hitboxes:
-                        pygame.draw.rect(screen, (255, 0, 0), self.hitboxes[row_count][tile_count])
+                        pygame.draw.rect(screen, (255, 0, 0), self.hitboxes[row_count][tile_count], width=1)
                     tile_count += 1
             tile_count = 0
             row_count += 1
