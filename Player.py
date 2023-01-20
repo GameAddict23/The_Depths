@@ -129,8 +129,10 @@ class Revised():
         self.count = 0
 
         self.unlocked_fireballs = False
-        self.fireballs = []
+        self.fireballs = {}
         self.fireball_limit = 2
+        for i in range(self.fireball_limit):
+            self.fireballs[i] = 0
         self.fireball_cooldown = 1000
         self.last_fired = 0
         self.attack_cooldown = 200
@@ -149,8 +151,11 @@ class Revised():
         pygame.draw.rect(screen, (255, 0, 0), self.health_bar_red)
         pygame.draw.rect(screen, (0, 255, 0), self.health_bar_green)
 
-        for i in range(self.fireball_limit-len(self.fireballs)):
-            pygame.draw.circle(screen, (255, 0, 0), (15+25*i, self.health_bar_green.height+15), 10)
+        count = 0
+        for key in self.fireballs.keys():
+            if self.fireballs[key] == 0:
+                pygame.draw.circle(screen, (255, 0, 0), (15+25*count, self.health_bar_green.height+15), 10)
+                count += 1
 
     def return_to_start(self):
         self.pos.x, self.pos.y = self.starting_pos
@@ -286,45 +291,44 @@ class Revised():
             self.animate_walk()
 
     def detect_bottom_collision(self, level, movement_x=0, movement_y=0):
-        for row in level.hitboxes:
-            for hitbox in row:
-                self.update_hitbox()
-                if (hitbox.left <= self.hitbox.left+movement_x <= hitbox.right or hitbox.left <= self.hitbox.right+movement_x <= hitbox.right):
-                    if hitbox.top <= self.hitbox.bottom+movement_y <= hitbox.center[1] or level.moving_tiles[level.hitboxes.index(row)][row.index(hitbox)] and hitbox.top-1 <= self.hitbox.bottom+movement_y <= hitbox.center[1]:
-                        # print(hitbox.top <= self.hitbox.bottom <= hitbox.bottom, movement_y)
-                        # print("On ground!", self.hitbox.bottom, self.pos.bottom, hitbox.top, hitbox.bottom, [level.hitboxes.index(row), row.index(hitbox)])
-                        self.hitbox.bottom = self.pos.bottom = hitbox.top
-                        self.update_hitbox()
-                        return True
+        for key in level.hitboxes.keys():
+            hitbox = level.hitboxes[key][0]
+            if (hitbox.left <= self.hitbox.left+movement_x <= hitbox.right or hitbox.left <= self.hitbox.right+movement_x <= hitbox.right):
+                if hitbox.top <= self.hitbox.bottom+movement_y <= hitbox.center[1] or level.moving_tiles[key] and hitbox.top-1 <= self.hitbox.bottom+movement_y <= hitbox.center[1]:
+                    # print(hitbox.top <= self.hitbox.bottom <= hitbox.bottom, movement_y)
+                    # print("On ground!", self.hitbox.bottom, self.pos.bottom, hitbox.top, hitbox.bottom, [level.hitboxes.index(row), row.index(hitbox)])
+                    self.hitbox.bottom = self.pos.bottom = hitbox.top
+                    self.update_hitbox()
+                    return True
         return False
 
     def detect_right_collision(self, level):
-        for row in level.hitboxes:
-            for hitbox in row:
-                if self.hitbox.top <= hitbox.top and self.hitbox.bottom > hitbox.top or self.hitbox.bottom >= hitbox.bottom and self.hitbox.top < hitbox.bottom:
-                    if (hitbox.left <= self.hitbox.right+self.velocity[0] <= hitbox.right):
-                        return True
+        for key in level.hitboxes.keys():
+            hitbox = level.hitboxes[key][0]
+            if self.hitbox.top <= hitbox.top and self.hitbox.bottom > hitbox.top or self.hitbox.bottom >= hitbox.bottom and self.hitbox.top < hitbox.bottom:
+                if (hitbox.left <= self.hitbox.right+self.velocity[0] <= hitbox.right):
+                    return True
         return False
 
     def detect_left_collision(self, level):
-        for row in level.hitboxes:
-            for hitbox in row:
-                if self.hitbox.bottom >= hitbox.bottom and self.hitbox.top < hitbox.bottom:
-                    if (hitbox.left <= self.hitbox.left-self.velocity[0] <= hitbox.right):
-                        return True
+        for key in level.hitboxes.keys():
+            hitbox = level.hitboxes[key][0]
+            if self.hitbox.bottom >= hitbox.bottom and self.hitbox.top < hitbox.bottom:
+                if (hitbox.left <= self.hitbox.left-self.velocity[0] <= hitbox.right):
+                    return True
         return False
 
     def detect_top_collision(self, level, y_movement=0):
-        for row in level.hitboxes:
-            for hitbox in row:
-                if (hitbox.left <= self.hitbox.left <= hitbox.right or hitbox.left <= self.hitbox.right <= hitbox.right):
-                    if self.hitbox.bottom >= hitbox.bottom and self.hitbox.top <= hitbox.bottom:
-                        return True
+        for key in level.hitboxes.keys():
+            hitbox = level.hitboxes[key][0]
+            if (hitbox.left <= self.hitbox.left <= hitbox.right or hitbox.left <= self.hitbox.right <= hitbox.right):
+                if self.hitbox.bottom >= hitbox.bottom and self.hitbox.top <= hitbox.bottom:
+                    return True
         return False
 
     def on_tile(self, level, row, tile):
-        hitbox = level.hitboxes[row][tile]
-        is_moving = level.moving_tiles[row][tile]
+        hitbox = level.hitboxes[(row, tile)][0]
+        is_moving = level.moving_tiles[(row, tile)]
         self.update_hitbox()
         if (hitbox.left <= self.hitbox.left <= hitbox.right or hitbox.left <= self.hitbox.right <= hitbox.right):
             if hitbox.top <= self.hitbox.bottom <= hitbox.center[1] or is_moving and hitbox.top-1 <= self.hitbox.bottom <= hitbox.center[1]:
@@ -353,7 +357,7 @@ class Revised():
                     return True
         return False
 
-    def move(self, level, shift_x, shift_y, right=False, left=False, jump=False, attack=False, fire=False, enemy_list=[]):
+    def move(self, level, shift_x, shift_y, right=False, left=False, jump=False, attack=False, fire=False, enemy_dict={}):
         if self.dead:
             self.die()
 
@@ -399,32 +403,36 @@ class Revised():
                         self.jump_animation_counter = 0
                         self.fall_animation_counter = 0
 
-                if self.unlocked_fireballs and fire and len(self.fireballs) < self.fireball_limit and pygame.time.get_ticks() - self.last_fired >= self.fireball_cooldown:
+                if self.unlocked_fireballs and fire and pygame.time.get_ticks() - self.last_fired >= self.fireball_cooldown:
                     if self.left:
-                        self.fireballs.append(Fireball(starting_pos=(self.hitbox.x-self.width-shift_x, self.hitbox.y-10-shift_y), left=self.left))
+                        fireball = Fireball(starting_pos=(self.hitbox.x-self.width-shift_x, self.hitbox.y-10-shift_y), left=self.left)
                     else:
-                        self.fireballs.append(Fireball(starting_pos=(self.hitbox.x-shift_x, self.hitbox.y-10-shift_y), left=self.left))
+                        fireball = Fireball(starting_pos=(self.hitbox.x-shift_x, self.hitbox.y-10-shift_y), left=self.left)
+                    for key in self.fireballs.keys():
+                        if self.fireballs[key] == 0:
+                            self.fireballs[key] = fireball
+                            break
                     self.last_fired = pygame.time.get_ticks()
             elif self.attack_animation_counter+1 > len(self.framesATTACK_l)-1:
-                for enemy in enemy_list:
-                    if self.attack_connected(enemy):
-                        enemy.take_damage(self.damage)
-                        break
+                for key in enemy_dict.keys():
+                    if enemy_dict[key] != 0 and self.attack_connected(enemy_dict[key]):
+                        enemy_dict[key].take_damage(self.damage)
                 self.attack_animation_counter = 0
                 self.attacking = False
                 self.last_attacked = pygame.time.get_ticks()
 
         x = 0
-        for f in range(len(self.fireballs)):
-            for e in range(len(enemy_list)):
-                if enemy_list[e].collide_left(self.fireballs[f-x].hitbox, account_for_velocity=False) or enemy_list[e].collide_right(self.fireballs[f-x].hitbox, account_for_velocity=False):
-                    enemy_list[e].take_damage(self.fireballs[f-x].damage)
-                    self.fireballs[f].expired = True
-            if self.fireballs[f-x].expired:
-                self.fireballs.pop(f-x)
-                x += 1
-            if x < self.fireball_limit-1:
-                self.fireballs[f-x].move(level, shift_x, shift_y)
+        for fireball in self.fireballs.keys():
+            if self.fireballs[fireball] != 0:
+                for enemy in enemy_dict.keys():
+                    if enemy_dict[enemy] != 0:
+                        if enemy_dict[enemy].collide_left(self.fireballs[fireball].hitbox, account_for_velocity=False) or enemy_dict[enemy].collide_right(self.fireballs[fireball].hitbox, account_for_velocity=False):
+                            enemy_dict[enemy].take_damage(self.fireballs[fireball].damage)
+                            self.fireballs[fireball].expired = True
+                if self.fireballs[fireball].expired:
+                    self.fireballs[fireball] = 0
+                else:
+                    self.fireballs[fireball].move(level, shift_x, shift_y)
 
         self.isIdle = not(left or right) and not(self.attacking or self.jumping or self.falling or self.hit or self.dying)
 

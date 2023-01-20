@@ -135,19 +135,19 @@ def move_tiles(index: int, row: int, tiles: tuple[int], endpoints: tuple[int]):
     player_on_tile = False
     if len(dont_check)-1 < index:
         for tile in tiles:
-            level.moving_tiles[row][tile] = True
+            level.moving_tiles[(row, tile)] = True
         dont_check.append(False)
     speed = -1
-    if not(dont_check[index]) and level.hitboxes[row][tiles[0]].top-1 < endpoints[0]:
+    if not(dont_check[index]) and level.hitboxes[(row, tiles[0])][0].top-1 < endpoints[0]:
         speed = 1
-    elif level.hitboxes[row][tiles[0]].bottom+1 > endpoints[1]:
+    elif level.hitboxes[(row, tiles[0])][0].bottom+1 > endpoints[1]:
         speed = -1
         dont_check[index] = True
     else:
         dont_check[index] = False
     for tile in tiles:
-        level.hitboxes[row][tile].y += speed
-        level.original_hitboxes[row][tile].y += speed
+        level.hitboxes[(row, tile)][0].y += speed
+        level.original_hitboxes[(row, tile)].y += speed
         if player.on_tile(level, row, tile):
             player_on_tile = True
     if player_on_tile and player.hitbox.center[1] > SCREEN_HEIGHT*0.45 and (speed < 0 and player.hitbox.center[1] < SCREEN_HEIGHT*0.6 or speed > 0 and player.hitbox.center[1]-5 < SCREEN_HEIGHT*0.6) and -SCREEN_HEIGHT <= shift_y-speed <= 0:
@@ -201,8 +201,8 @@ player = Revised(
         offset_height = -40
         )
 
-skeleton_generator = EnemyGenerator(enemy_type="skeleton", limit=5, pos=(30*tile_width, 10*tile_height))
-goblin_generator = EnemyGenerator(enemy_type="goblin", limit=5, pos=(80*tile_width, 10*tile_height))
+skeleton_generator = EnemyGenerator(enemy_type="skeleton", limit=10, pos=(30*tile_width, 10*tile_height))
+goblin_generator = EnemyGenerator(enemy_type="goblin", limit=10, pos=(80*tile_width, 10*tile_height))
 
 run = True
 # draw_level_hitboxes = False
@@ -250,25 +250,17 @@ while run:
     else:
         player.scrolling_y = False
 
-    # print(f"{player.falling_momentum, player.scrolling_y, player.hitbox.center}")
-    # print(f"{player.falling_momentum, shift_y-player.falling_momentum >= -SCREEN_HEIGHT}")
     move_tiles(0, 16, [i for i in range(14, 17)], (24*tile_height+5+shift_y, 17*tile_height+shift_y))
     move_tiles(1, 40, [i for i in range(20, 25)], (55*tile_height+5+shift_y, 35*tile_height+shift_y))
 
     level.update_hitboxes(shift_x, shift_y)
 
-    level.render()
+    level.render(draw_hitboxes=False)
     # draw_hitboxes()
-    player.move(level, shift_x, shift_y, right=keys[pygame.K_RIGHT], left=keys[pygame.K_LEFT], jump=keys[pygame.K_SPACE], attack=keys[pygame.K_a], fire=keys[pygame.K_f], enemy_list=skeleton_generator.enemies+goblin_generator.enemies)
+    player.move(level, shift_x, shift_y, right=keys[pygame.K_RIGHT], left=keys[pygame.K_LEFT], jump=keys[pygame.K_SPACE], attack=keys[pygame.K_a], fire=keys[pygame.K_f], enemy_dict=skeleton_generator.enemies)
 
     skeleton_generator.main(level, shift_x, shift_y, player)
-    goblin_generator.main(level, shift_x, shift_y, player)
-
-    # for fireball in fireballs:
-    #     if fireball.hit:
-    #         fireballs.pop(fireballs.index(fireball))
-    #     fireball.move(level, shift_x, shift_y)
-    #     fireball.draw_hitbox()
+    # goblin_generator.main(level, shift_x, shift_y, player)
 
     player.render_hud()
     if player.dead:
@@ -279,24 +271,12 @@ while run:
         shift_y = 0
         player.die()
 
-    # print(f"falling: {player.falling}")
-
-
-    # if pygame.time.get_ticks() - timer >= 50:
-    # move_tiles(1, 24, [i for i in range(53, 58)], (24*tile_height+5+shift_y, 17*tile_height+shift_y))
-    # move_tiles(3, 8, (0, 2), (2*tile_height, tile_height))
-    #timer = pygame.time.get_ticks()
-
-    # pygame.draw.line(screen, (255, 0, 0), (0, 175), (SCREEN_WIDTH, 175), width=2)
-
-    # pygame.draw.rect(screen, (255, 0, 0), pygame.Rect((17*tile_width, 11*tile_height), (tile_width, tile_height)))
-
     # draw_grid()
 
     pygame.display.flip()
 
     clock.tick(60)
 
-    # print(round(clock.get_fps()))
+    print(round(clock.get_fps()))
 
 pygame.quit()

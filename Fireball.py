@@ -69,19 +69,19 @@ class Fireball():
         self.animate()
 
     def detect_right_collision(self, level):
-        for row in level.hitboxes:
-            for hitbox in row:
-                if self.hitbox.top <= hitbox.top and self.hitbox.bottom > hitbox.top or self.hitbox.bottom >= hitbox.bottom and self.hitbox.top < hitbox.bottom:
-                    if (hitbox.left <= self.hitbox.right+self.speed <= hitbox.right):
-                        return True
+        for key in level.hitboxes.keys():
+            hitbox = level.hitboxes[key][0]
+            if self.hitbox.top <= hitbox.top and self.hitbox.bottom > hitbox.top or self.hitbox.bottom >= hitbox.bottom and self.hitbox.top < hitbox.bottom:
+                if (hitbox.left <= self.hitbox.right+self.speed <= hitbox.right):
+                    return True
         return False
 
     def detect_left_collision(self, level):
-        for row in level.hitboxes:
-            for hitbox in row:
-                if self.hitbox.top <= hitbox.top and self.hitbox.bottom > hitbox.top or self.hitbox.bottom >= hitbox.bottom and self.hitbox.top < hitbox.bottom:
-                    if (hitbox.left <= self.hitbox.left-self.speed <= hitbox.right):
-                        return True
+        for key in level.hitboxes.keys():
+            hitbox = level.hitboxes[key][0]
+            if self.hitbox.top <= hitbox.top and self.hitbox.bottom > hitbox.top or self.hitbox.bottom >= hitbox.bottom and self.hitbox.top < hitbox.bottom:
+                if (hitbox.left <= self.hitbox.left-self.speed <= hitbox.right):
+                    return True
         return False
 
     def draw_hitbox(self):

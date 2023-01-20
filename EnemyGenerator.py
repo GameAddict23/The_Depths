@@ -22,26 +22,32 @@ class EnemyGenerator():
     def __post_init__(self):
         self.enemy_type = self.enemy_type.lower()
 
-        self.enemies = []
+        self.enemies = {}
+        for i in range(self.limit):
+            self.enemies[i] = 0
         self.last_generated = 0
 
     def generate(self):
-        if len(self.enemies) < self.limit:
-            match self.enemy_type:
-                case "skeleton":
-                    self.enemies.append(Skeleton(starting_pos=self.pos, left=true_or_false()))
-                case "goblin":
-                    self.enemies.append(Goblin(starting_pos=self.pos, left=true_or_false()))
+        enemy = 0
+        match self.enemy_type:
+            case "skeleton":
+                enemy = Skeleton(starting_pos=self.pos, left=true_or_false())
+            case "goblin":
+                enemy = Goblin(starting_pos=self.pos, left=true_or_false())
+        for key in self.enemies.keys():
+            if self.enemies[key] == 0:
+                self.enemies[key] = enemy
+                break
 
     def main(self, level, shift_x, shift_y, player):
         if pygame.time.get_ticks() - self.last_generated >= self.rate:
             self.generate()
             self.last_generated = pygame.time.get_ticks()
 
-        x = 0
-        for i in range(len(self.enemies)):
-            if self.enemies[i-x].dead:
-                self.enemies.pop(i-x)
-                x += 1
-            self.enemies[i-x].move(level, shift_x, shift_y, player)
+        for key in self.enemies.keys():
+            if self.enemies[key] != 0:
+                if self.enemies[key].dead:
+                    self.enemies[key] = 0
+                else:
+                    self.enemies[key].move(level, shift_x, shift_y, player)
 

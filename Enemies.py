@@ -186,40 +186,39 @@ class Skeleton():
             pass
 
     def detect_bottom_collision(self, level, movement_x=0, movement_y=0):
-        for row in level.hitboxes:
-            for hitbox in row:
-                self.update_hitbox()
-                if (hitbox.left <= self.hitbox.left+movement_x <= hitbox.right or hitbox.left <= self.hitbox.right+movement_x <= hitbox.right):
-                    if hitbox.top <= self.hitbox.bottom+movement_y <= hitbox.center[1] or level.moving_tiles[level.hitboxes.index(row)][row.index(hitbox)] and hitbox.top-1 <= self.hitbox.bottom+movement_y <= hitbox.center[1]:
-                        # print(hitbox.top <= self.hitbox.bottom <= hitbox.bottom, movement_y)
-                        # print("On ground!", self.hitbox.bottom, self.pos.bottom, hitbox.top, hitbox.bottom, [level.hitboxes.index(row), row.index(hitbox)])
-                        self.hitbox.bottom = hitbox.top
-                        self.pos.bottom = level.original_hitboxes[level.hitboxes.index(row)][row.index(hitbox)].top
-                        return True
+        for key in level.hitboxes.keys():
+            hitbox = level.hitboxes[key][0]
+            if (hitbox.left <= self.hitbox.left+movement_x <= hitbox.right or hitbox.left <= self.hitbox.right+movement_x <= hitbox.right):
+                if hitbox.top <= self.hitbox.bottom+movement_y <= hitbox.center[1] or level.moving_tiles[key] and hitbox.top-1 <= self.hitbox.bottom+movement_y <= hitbox.center[1]:
+                    # print(hitbox.top <= self.hitbox.bottom <= hitbox.bottom, movement_y)
+                    # print("On ground!", self.hitbox.bottom, self.pos.bottom, hitbox.top, hitbox.bottom, [level.hitboxes.index(row), row.index(hitbox)])
+                    self.hitbox.bottom = hitbox.top
+                    self.pos.bottom = level.original_hitboxes[key].top
+                    return True
         return False
 
     def detect_right_collision(self, level):
-        for row in level.hitboxes:
-            for hitbox in row:
-                if self.hitbox.top <= hitbox.top and self.hitbox.bottom > hitbox.top or self.hitbox.bottom >= hitbox.bottom and self.hitbox.top < hitbox.bottom:
-                    if (hitbox.left <= self.hitbox.right+self.velocity[0] <= hitbox.right):
-                        return True
+        for key in level.hitboxes.keys():
+            hitbox = level.hitboxes[key][0]
+            if self.hitbox.top <= hitbox.top and self.hitbox.bottom > hitbox.top or self.hitbox.bottom >= hitbox.bottom and self.hitbox.top < hitbox.bottom:
+                if (hitbox.left <= self.hitbox.right+self.velocity[0] <= hitbox.right):
+                    return True
         return False
 
     def detect_left_collision(self, level):
-        for row in level.hitboxes:
-            for hitbox in row:
-                if self.hitbox.bottom >= hitbox.bottom and self.hitbox.top < hitbox.bottom:
-                    if (hitbox.left <= self.hitbox.left-self.velocity[0] <= hitbox.right):
-                        return True
+        for key in level.hitboxes.keys():
+            hitbox = level.hitboxes[key][0]
+            if self.hitbox.bottom >= hitbox.bottom and self.hitbox.top < hitbox.bottom:
+                if (hitbox.left <= self.hitbox.left-self.velocity[0] <= hitbox.right):
+                    return True
         return False
 
     def detect_top_collision(self, level, y_movement=0):
-        for row in level.hitboxes:
-            for hitbox in row:
-                if (hitbox.left <= self.hitbox.left <= hitbox.right or hitbox.left <= self.hitbox.right <= hitbox.right):
-                    if self.hitbox.bottom >= hitbox.bottom and self.hitbox.top <= hitbox.bottom:
-                        return True
+        for key in level.hitboxes.keys():
+            hitbox = level.hitboxes[key][0]
+            if (hitbox.left <= self.hitbox.left <= hitbox.right or hitbox.left <= self.hitbox.right <= hitbox.right):
+                if self.hitbox.bottom >= hitbox.bottom and self.hitbox.top <= hitbox.bottom:
+                    return True
         return False
 
     def on_tile(self, level, row, tile):
@@ -542,41 +541,41 @@ class Goblin():
             pass
 
     def detect_bottom_collision(self, level, movement_x=0, movement_y=0):
-        for row in level.hitboxes:
-            for hitbox in row:
-                self.update_hitbox()
-                if (hitbox.left <= self.hitbox.left+movement_x <= hitbox.right or hitbox.left <= self.hitbox.right+movement_x <= hitbox.right):
-                    if hitbox.top <= self.hitbox.bottom+movement_y <= hitbox.center[1] or level.moving_tiles[level.hitboxes.index(row)][row.index(hitbox)] and hitbox.top-1 <= self.hitbox.bottom+movement_y <= hitbox.center[1]:
-                        # print(hitbox.top <= self.hitbox.bottom <= hitbox.bottom, movement_y)
-                        # print("On ground!", self.hitbox.bottom, self.pos.bottom, hitbox.top, hitbox.bottom, [level.hitboxes.index(row), row.index(hitbox)])
-                        self.hitbox.bottom = hitbox.top
-                        self.pos.bottom = level.original_hitboxes[level.hitboxes.index(row)][row.index(hitbox)].top
-                        return True
+        for key in level.hitboxes.keys():
+            hitbox = level.hitboxes[key][0]
+            if (hitbox.left <= self.hitbox.left+movement_x <= hitbox.right or hitbox.left <= self.hitbox.right+movement_x <= hitbox.right):
+                if hitbox.top <= self.hitbox.bottom+movement_y <= hitbox.center[1] or level.moving_tiles[key] and hitbox.top-1 <= self.hitbox.bottom+movement_y <= hitbox.center[1]:
+                    # print(hitbox.top <= self.hitbox.bottom <= hitbox.bottom, movement_y)
+                    # print("On ground!", self.hitbox.bottom, self.pos.bottom, hitbox.top, hitbox.bottom, [level.hitboxes.index(row), row.index(hitbox)])
+                    self.hitbox.bottom = hitbox.top
+                    self.pos.bottom = level.original_hitboxes[key].top
+                    return True
         return False
 
     def detect_right_collision(self, level):
-        for row in level.hitboxes:
-            for hitbox in row:
-                if self.hitbox.top <= hitbox.top and self.hitbox.bottom > hitbox.top or self.hitbox.bottom >= hitbox.bottom and self.hitbox.top < hitbox.bottom:
-                    if (hitbox.left <= self.hitbox.right+self.velocity[0] <= hitbox.right):
-                        return True
+        for key in level.hitboxes.keys():
+            hitbox = level.hitboxes[key][0]
+            if self.hitbox.top <= hitbox.top and self.hitbox.bottom > hitbox.top or self.hitbox.bottom >= hitbox.bottom and self.hitbox.top < hitbox.bottom:
+                if (hitbox.left <= self.hitbox.right+self.velocity[0] <= hitbox.right):
+                    return True
         return False
 
     def detect_left_collision(self, level):
-        for row in level.hitboxes:
-            for hitbox in row:
-                if self.hitbox.bottom >= hitbox.bottom and self.hitbox.top < hitbox.bottom:
-                    if (hitbox.left <= self.hitbox.left-self.velocity[0] <= hitbox.right):
-                        return True
+        for key in level.hitboxes.keys():
+            hitbox = level.hitboxes[key][0]
+            if self.hitbox.bottom >= hitbox.bottom and self.hitbox.top < hitbox.bottom:
+                if (hitbox.left <= self.hitbox.left-self.velocity[0] <= hitbox.right):
+                    return True
         return False
 
     def detect_top_collision(self, level, y_movement=0):
-        for row in level.hitboxes:
-            for hitbox in row:
-                if (hitbox.left <= self.hitbox.left <= hitbox.right or hitbox.left <= self.hitbox.right <= hitbox.right):
-                    if self.hitbox.bottom >= hitbox.bottom and self.hitbox.top <= hitbox.bottom:
-                        return True
+        for key in level.hitboxes.keys():
+            hitbox = level.hitboxes[key][0]
+            if (hitbox.left <= self.hitbox.left <= hitbox.right or hitbox.left <= self.hitbox.right <= hitbox.right):
+                if self.hitbox.bottom >= hitbox.bottom and self.hitbox.top <= hitbox.bottom:
+                    return True
         return False
+
 
     def on_tile(self, level, row, tile):
         hitbox = level.hitboxes[row][tile]
