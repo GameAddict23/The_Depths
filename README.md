@@ -30,6 +30,8 @@ Here is where I found the spritesheets and other art:
 
 [Knight](https://aamatniekss.itch.io/fantasy-knight-free-pixelart-animated-character)
 
+[Fireball](https://xyezawr.itch.io/free-pixel-effects-pack-13-fireballs)
+
 [Enviroment](Will share link when I re-find them)
 
 # Performance
