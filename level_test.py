@@ -20,19 +20,6 @@ def draw_grid():
     for i in range(int(SCREEN_HEIGHT/tile_height)):
         pygame.draw.line(screen, (255, 255, 255), (0, i*tile_height), (SCREEN_WIDTH, i*tile_height))
 
-def draw_hitboxes():
-    global draw_level_hitboxes
-    draw_level_hitboxes = True
-    player.draw_hitbox()
-    # draws the borders for when vertical scrolling is activated
-    pygame.draw.line(screen, (0, 200, 200), (0, SCREEN_HEIGHT*0.45), (SCREEN_WIDTH, SCREEN_HEIGHT*0.45), width=2)
-    pygame.draw.line(screen, (100, 100, 100), (0, player.hitbox.center[1]), (SCREEN_WIDTH, player.hitbox.center[1]))
-    pygame.draw.line(screen, (0, 200, 200), (0, SCREEN_HEIGHT*0.6), (SCREEN_WIDTH, SCREEN_HEIGHT*0.6), width=2)
-    # draws the borders for when horiztonal scrolling is activated
-    pygame.draw.line(screen, (0, 200, 200), (SCREEN_WIDTH*0.5, 0), (SCREEN_WIDTH*0.5, SCREEN_HEIGHT), width=2)
-    pygame.draw.line(screen, (100, 100, 100), (player.hitbox.center[0], 0), (player.hitbox.center[0], SCREEN_HEIGHT))
-    pygame.draw.line(screen, (0, 200, 200), (SCREEN_WIDTH*0.6, 0), (SCREEN_WIDTH*0.6, SCREEN_HEIGHT), width=2)
-
 jump_frames_right = spritesheet(spritesheet=pygame.image.load("Mobs/Colour1/Outline/120x80_PNGSheets/_Jump.png").convert(), width=120, height=80, frames=3)
 jump_frames_right = jump_frames_right.get_images()
 
@@ -71,7 +58,6 @@ dying_frames_left = [pygame.transform.flip(x, True, False) for x in dying_frames
 background = pygame.Surface((64, 64))
 background_img = pygame.image.load("Enviroment/walls_far.png").convert_alpha()
 background.blit(background_img, (0, 0), ((310, 192), (64, 64)))
-# background = pygame.transform.scale(background, (SCREEN_WIDTH, SCREEN_HEIGHT))
 
 pillars = pygame.Surface((48, 128))
 pillars_img = pygame.image.load("Enviroment/env_objects.png").convert_alpha()
@@ -173,7 +159,7 @@ tile_types = [
 ,            [0, 5]
              ]
 
-level = Level(mapped_tiles=level_map, name="Demo", tile_types=tile_types)
+level = Level(mapped_tiles=level_map, name="Catacombs", tile_types=tile_types)
 
 player = Revised(
         velocity=[3, 4],
@@ -201,13 +187,9 @@ player = Revised(
         offset_height = -40
         )
 
-skeleton_generator = EnemyGenerator(enemy_type="skeleton", limit=10, pos=(30*tile_width, 10*tile_height))
-goblin_generator = EnemyGenerator(enemy_type="goblin", limit=10, pos=(80*tile_width, 10*tile_height))
+generator = EnemyGenerator(limit=20, pos=(30*tile_width, 10*tile_height))
 
 run = True
-# draw_level_hitboxes = False
-player.unlocked_fireballs = True
-# timer = pygame.time.get_ticks()
 shift_x, shift_y = 0, 0
 while run:
     for event in pygame.event.get():
@@ -218,7 +200,6 @@ while run:
     for x in range(int(SCREEN_HEIGHT/64)*2+2):
         for i in range(2*int(SCREEN_WIDTH/64)+2):
             screen.blit(background, (64*i+shift_x, 64*x+shift_y))
-    # screen.fill((0, 0, 0))
 
     for i in range(0, int(SCREEN_WIDTH/5), 2):
         screen.blit(pillars, ((SCREEN_WIDTH/5)*i+shift_x, shift_y))
@@ -257,10 +238,9 @@ while run:
 
     level.render(draw_hitboxes=False)
     # draw_hitboxes()
-    player.move(level, shift_x, shift_y, right=keys[pygame.K_RIGHT], left=keys[pygame.K_LEFT], jump=keys[pygame.K_SPACE], attack=keys[pygame.K_a], fire=keys[pygame.K_f], enemy_dict=skeleton_generator.enemies)
+    player.main(level, shift_x, shift_y, right=keys[pygame.K_RIGHT], left=keys[pygame.K_LEFT], jump=keys[pygame.K_SPACE], attack=keys[pygame.K_a], fire=keys[pygame.K_f], enemy_dict=generator.enemies)
 
-    skeleton_generator.main(level, shift_x, shift_y, player)
-    # goblin_generator.main(level, shift_x, shift_y, player)
+    generator.main(level, shift_x, shift_y, player)
 
     player.render_hud()
     if player.dead:
@@ -277,6 +257,6 @@ while run:
 
     clock.tick(60)
 
-    print(round(clock.get_fps()))
+    # print(round(clock.get_fps()))
 
 pygame.quit()

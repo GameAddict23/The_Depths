@@ -18,13 +18,9 @@ class Level():
                 if type(tile) == tuple:
                     self.hitboxes[(row, self.mapped_tiles[row].index(tile))] = pygame.Rect((self.mapped_tiles[row].index(tile)*tile[1][0], row*tile[1][1]+self.tile_types[tile[2]][1]), (tile[1][0], tile[1][1]-self.tile_types[tile[2]][1])), self.tile_types[tile[2]][1], tile[0]
 
-        # self.moving_tiles = [[False for tile in row] for row in self.hitboxes]
         for key in self.hitboxes.keys():
-            print(key)
             self.original_hitboxes[key] = pygame.Rect((self.hitboxes[key][0].x, self.hitboxes[key][0].y), (self.hitboxes[key][0].width, self.hitboxes[key][0].height))
             self.moving_tiles[key] = False
-        # self.moving_hitboxes = [[self.hitboxes[row][tile] if self.moving_tiles[row][tile] else 0 for tile in range(len(self.hitboxes[row]))] for row in range(len(self.hitboxes))]
-        # self.shift_xx, self.shift_yy = 0, 0
 
     def render(self, offset=(0, 0), draw_hitboxes=False):
         for key in self.hitboxes.keys():

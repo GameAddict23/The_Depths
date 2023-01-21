@@ -41,6 +41,8 @@ class Skeleton():
     fly: bool = False
     left: bool = True
 
+    exp_reward: int = 10
+
     def __post_init__(self):
         self.pos = pygame.Rect(self.starting_pos, (self.width, self.height))
         self.hitbox = pygame.Rect((self.pos.x+self.offset_x, self.pos.y+self.offset_y), (self.width+self.offset_width, self.height+self.offset_height))
@@ -190,8 +192,6 @@ class Skeleton():
             hitbox = level.hitboxes[key][0]
             if (hitbox.left <= self.hitbox.left+movement_x <= hitbox.right or hitbox.left <= self.hitbox.right+movement_x <= hitbox.right):
                 if hitbox.top <= self.hitbox.bottom+movement_y <= hitbox.center[1] or level.moving_tiles[key] and hitbox.top-1 <= self.hitbox.bottom+movement_y <= hitbox.center[1]:
-                    # print(hitbox.top <= self.hitbox.bottom <= hitbox.bottom, movement_y)
-                    # print("On ground!", self.hitbox.bottom, self.pos.bottom, hitbox.top, hitbox.bottom, [level.hitboxes.index(row), row.index(hitbox)])
                     self.hitbox.bottom = hitbox.top
                     self.pos.bottom = level.original_hitboxes[key].top
                     return True
@@ -227,8 +227,6 @@ class Skeleton():
         self.update_hitbox()
         if (hitbox.left <= self.hitbox.left <= hitbox.right or hitbox.left <= self.hitbox.right <= hitbox.right):
             if hitbox.top <= self.hitbox.bottom <= hitbox.center[1] or is_moving and hitbox.top-1 <= self.hitbox.bottom <= hitbox.center[1]:
-                # print(hitbox.top <= self.hitbox.bottom <= hitbox.bottom, movement_y)
-                # print("On ground!", self.hitbox.bottom, self.pos.bottom, hitbox.top, hitbox.bottom, [level.hitboxes.index(row), row.index(hitbox)])
                 self.pos.bottom = hitbox.top
                 self.update_hitbox()
                 return True
@@ -254,7 +252,62 @@ class Skeleton():
                     return True
         return False
 
-    def move(self, level, shift_x, shift_y, player, right=False, left=False, jump=False):
+    def take_damage(self, amount):
+        self.hit = True
+        self.attacking = False
+        self.attack_animation_counter = 0
+        self.health -= amount
+        if self.health <= 0:
+            self.dying = True
+
+    def attack_connected(self, player):
+        if player.collide_right(self.attack_area) or player.collide_left(self.attack_area):
+            return True
+        return False
+
+    def attack(self, player):
+        if self.attack_animation_counter+1 > len(self.framesATTACK_l)-1:
+            if self.attack_connected(player):
+                player.take_damage(self.damage)
+            self.attack_animation_counter = 0
+            self.attacking = False
+
+    def fall(self, level, boost=0):
+        if self.falling:
+            if self.falling_momentum < 10:
+                self.falling_momentum = gravity * (pygame.time.get_ticks()-self.fell_at_time)*(1/500) + boost
+            else:
+                self.falling_momentum = 10
+            if self.detect_bottom_collision(level, movement_y=self.falling_momentum):
+                self.fell_at_time = 0
+                self.fall_animation_counter = 0
+                self.falling = False
+                self.falling_momentum = 0
+            else:
+                self.pos.bottom += self.falling_momentum
+                self.hitbox.bottom += self.falling_momentum
+            self.update_hitbox()
+
+    def jump(self, level):
+        self.jumping_momentum = self.velocity[1] - self.jump_count*0.1
+        if self.jumping_momentum >= 0 and not(self.detect_top_collision(level, self.jumping_momentum)):
+            self.pos.bottom -= self.jumping_momentum
+            self.jump_count += 1
+        else:
+            self.jumping = False
+            self.jump_count = 0
+            if self.detect_top_collision(level, self.jumping_momentum):
+                self.fell_at_time = pygame.time.get_ticks()
+                self.falling = True
+                self.fall(level, boost=1)
+            self.jumping_momentum = 0
+            self.update_hitbox()
+
+    def draw_hitbox(self):
+        pygame.draw.rect(screen, rect=self.hitbox, color=(255, 0, 0), width=1)
+        pygame.draw.rect(screen, rect=self.attack_area, color=(100, 100, 0), width=1)
+
+    def main(self, level, shift_x, shift_y, player, right=False, left=False, jump=False):
         self.shift_x = shift_x
         self.shift_y = shift_y
         self.update_hitbox()
@@ -310,63 +363,6 @@ class Skeleton():
         self.update_hitbox()
         self.animate()
 
-    def take_damage(self, amount):
-        self.hit = True
-        self.attacking = False
-        self.attack_animation_counter = 0
-        self.health -= amount
-        if self.health <= 0:
-            self.dying = True
-
-    def attack_connected(self, player):
-        if player.collide_right(self.attack_area) or player.collide_left(self.attack_area):
-            return True
-        return False
-
-    def attack(self, player):
-        if self.attack_animation_counter+1 > len(self.framesATTACK_l)-1:
-            if self.attack_connected(player):
-                player.take_damage(self.damage)
-            self.attack_animation_counter = 0
-            self.attacking = False
-
-    def fall(self, level, boost=0):
-        if self.falling:
-            if self.falling_momentum < 10:
-                self.falling_momentum = gravity * (pygame.time.get_ticks()-self.fell_at_time)*(1/500) + boost
-            else:
-                self.falling_momentum = 10
-            # print(f"fall function: {self.falling_momentum}, {self.hitbox.bottom+self.falling_momentum}")
-            if self.detect_bottom_collision(level, movement_y=self.falling_momentum):
-                self.fell_at_time = 0
-                self.fall_animation_counter = 0
-                self.falling = False
-                self.falling_momentum = 0
-            else:
-                self.pos.bottom += self.falling_momentum
-                self.hitbox.bottom += self.falling_momentum
-            self.update_hitbox()
-
-    def jump(self, level):
-        self.jumping_momentum = self.velocity[1] - self.jump_count*0.1
-        if self.jumping_momentum >= 0 and not(self.detect_top_collision(level, self.jumping_momentum)):
-            self.pos.bottom -= self.jumping_momentum
-            self.jump_count += 1
-        else:
-            self.jumping = False
-            self.jump_count = 0
-            if self.detect_top_collision(level, self.jumping_momentum):
-                self.fell_at_time = pygame.time.get_ticks()
-                self.falling = True
-                self.fall(level, boost=1)
-            self.jumping_momentum = 0
-            self.update_hitbox()
-
-    def draw_hitbox(self):
-        pygame.draw.rect(screen, rect=self.hitbox, color=(255, 0, 0), width=1)
-        pygame.draw.rect(screen, rect=self.attack_area, color=(100, 100, 0), width=1)
-        # pygame.draw.rect(screen, rect=self.pos, color=(255, 0, 0), width=1)
-
 goblin_walking_right = spritesheet(spritesheet=pygame.image.load("Mobs/Monsters/Goblin/Run.png").convert(), width=150, height=150, frames=4)
 goblin_walking_right = goblin_walking_right.get_images()
 goblin_walking_left = [pygame.transform.flip(frame, True, False) for frame in goblin_walking_right]
@@ -385,16 +381,18 @@ goblin_death_left = [pygame.transform.flip(frame, True, False) for frame in gobl
 
 @dataclass
 class Goblin():
-    width: int = 90
+    width: int = 80
     height: int = 100
-    offset_x: int = 40
-    offset_y: int = 50
-    offset_width: int = -40
-    offset_height: int = -50
+    offset_x: int = 50
+    offset_y: int = 60
+    offset_width: int = -35
+    offset_height: int = -60
     starting_pos: tuple[int] = (0, 0)
     return_pos: tuple[int] = starting_pos
     fly: bool = False
     left: bool = True
+
+    exp_reward: int = 10
 
     def __post_init__(self):
         self.pos = pygame.Rect(self.starting_pos, (self.width, self.height))
@@ -490,9 +488,9 @@ class Goblin():
 
     def animate_walk(self):
         if self.left:
-            screen.blit(self.framesLEFT[self.walking_counter], (self.hitbox.x-self.width/2, self.hitbox.y-self.height/2))
+            screen.blit(self.framesLEFT[self.walking_counter], (self.hitbox.x-self.width/2-10, self.hitbox.y-self.offset_y))
         else:
-            screen.blit(self.framesRIGHT[self.walking_counter], (self.hitbox.x-self.width/2-13, self.hitbox.y-self.height/2))
+            screen.blit(self.framesRIGHT[self.walking_counter], (self.hitbox.x-self.width/2-13, self.hitbox.y-self.offset_y))
 
         self.update_counter()
 
@@ -506,25 +504,25 @@ class Goblin():
 
     def animate_attack(self):
         if self.left:
-            screen.blit(self.framesATTACK_l[self.attack_animation_counter], (self.hitbox.x-self.width/2, self.hitbox.y-self.height/2))
+            screen.blit(self.framesATTACK_l[self.attack_animation_counter], (self.hitbox.x-self.width/2-10, self.hitbox.y-self.offset_y))
         else:
-            screen.blit(self.framesATTACK_r[self.attack_animation_counter], (self.hitbox.x-self.width/2-13, self.hitbox.y-self.height/2))
+            screen.blit(self.framesATTACK_r[self.attack_animation_counter], (self.hitbox.x-self.width/2-13, self.hitbox.y-self.offset_y))
 
         self.update_counter()
 
     def animate_hit(self):
         if self.left:
-            screen.blit(self.framesHIT_l[self.hit_counter], (self.hitbox.x-self.width/2, self.hitbox.y-self.height/2))
+            screen.blit(self.framesHIT_l[self.hit_counter], (self.hitbox.x-self.width/2-10, self.hitbox.y-self.offset_y))
         else:
-            screen.blit(self.framesHIT_r[self.hit_counter], (self.hitbox.x-self.width/2-13, self.hitbox.y-self.height/2))
+            screen.blit(self.framesHIT_r[self.hit_counter], (self.hitbox.x-self.width/2-13, self.hitbox.y-self.offset_y))
 
         self.update_counter()
 
     def animate_death(self):
         if self.left:
-            screen.blit(self.framesDEATH_l[self.dying_counter], (self.hitbox.x-self.width/2, self.hitbox.y-self.height/2))
+            screen.blit(self.framesDEATH_l[self.dying_counter], (self.hitbox.x-self.width/2-10, self.hitbox.y-self.offset_y))
         else:
-            screen.blit(self.framesDEATH_r[self.dying_counter], (self.hitbox.x-self.width/2-13, self.hitbox.y-self.height/2))
+            screen.blit(self.framesDEATH_r[self.dying_counter], (self.hitbox.x-self.width/2-13, self.hitbox.y-self.offset_y))
 
         self.update_counter()
 
@@ -545,8 +543,6 @@ class Goblin():
             hitbox = level.hitboxes[key][0]
             if (hitbox.left <= self.hitbox.left+movement_x <= hitbox.right or hitbox.left <= self.hitbox.right+movement_x <= hitbox.right):
                 if hitbox.top <= self.hitbox.bottom+movement_y <= hitbox.center[1] or level.moving_tiles[key] and hitbox.top-1 <= self.hitbox.bottom+movement_y <= hitbox.center[1]:
-                    # print(hitbox.top <= self.hitbox.bottom <= hitbox.bottom, movement_y)
-                    # print("On ground!", self.hitbox.bottom, self.pos.bottom, hitbox.top, hitbox.bottom, [level.hitboxes.index(row), row.index(hitbox)])
                     self.hitbox.bottom = hitbox.top
                     self.pos.bottom = level.original_hitboxes[key].top
                     return True
@@ -583,8 +579,6 @@ class Goblin():
         self.update_hitbox()
         if (hitbox.left <= self.hitbox.left <= hitbox.right or hitbox.left <= self.hitbox.right <= hitbox.right):
             if hitbox.top <= self.hitbox.bottom <= hitbox.center[1] or is_moving and hitbox.top-1 <= self.hitbox.bottom <= hitbox.center[1]:
-                # print(hitbox.top <= self.hitbox.bottom <= hitbox.bottom, movement_y)
-                # print("On ground!", self.hitbox.bottom, self.pos.bottom, hitbox.top, hitbox.bottom, [level.hitboxes.index(row), row.index(hitbox)])
                 self.pos.bottom = hitbox.top
                 self.update_hitbox()
                 return True
@@ -610,7 +604,62 @@ class Goblin():
                     return True
         return False
 
-    def move(self, level, shift_x, shift_y, player, right=False, left=False, jump=False):
+    def take_damage(self, amount):
+        self.hit = True
+        self.attacking = False
+        self.attack_animation_counter = 0
+        self.health -= amount
+        if self.health <= 0:
+            self.dying = True
+
+    def attack_connected(self, player):
+        if player.collide_right(self.attack_area) or player.collide_left(self.attack_area):
+            return True
+        return False
+
+    def attack(self, player):
+        if self.attack_animation_counter+1 > len(self.framesATTACK_l)-1:
+            if self.attack_connected(player):
+                player.take_damage(self.damage)
+            self.attack_animation_counter = 0
+            self.attacking = False
+
+    def fall(self, level, boost=0):
+        if self.falling:
+            if self.falling_momentum < 10:
+                self.falling_momentum = gravity * (pygame.time.get_ticks()-self.fell_at_time)*(1/500) + boost
+            else:
+                self.falling_momentum = 10
+            if self.detect_bottom_collision(level, movement_y=self.falling_momentum):
+                self.fell_at_time = 0
+                self.fall_animation_counter = 0
+                self.falling = False
+                self.falling_momentum = 0
+            else:
+                self.pos.bottom += self.falling_momentum
+                self.hitbox.bottom += self.falling_momentum
+            self.update_hitbox()
+
+    def jump(self, level):
+        self.jumping_momentum = self.velocity[1] - self.jump_count*0.1
+        if self.jumping_momentum >= 0 and not(self.detect_top_collision(level, self.jumping_momentum)):
+            self.pos.bottom -= self.jumping_momentum
+            self.jump_count += 1
+        else:
+            self.jumping = False
+            self.jump_count = 0
+            if self.detect_top_collision(level, self.jumping_momentum):
+                self.fell_at_time = pygame.time.get_ticks()
+                self.falling = True
+                self.fall(level, boost=1)
+            self.jumping_momentum = 0
+            self.update_hitbox()
+
+    def draw_hitbox(self):
+        pygame.draw.rect(screen, rect=self.hitbox, color=(255, 0, 0), width=1)
+        pygame.draw.rect(screen, rect=self.attack_area, color=(100, 100, 0), width=1)
+
+    def main(self, level, shift_x, shift_y, player, right=False, left=False, jump=False):
         self.shift_x = shift_x
         self.shift_y = shift_y
         self.update_hitbox()
@@ -665,61 +714,3 @@ class Goblin():
 
         self.update_hitbox()
         self.animate()
-
-    def take_damage(self, amount):
-        self.hit = True
-        self.attacking = False
-        self.attack_animation_counter = 0
-        self.health -= amount
-        if self.health <= 0:
-            self.dying = True
-
-    def attack_connected(self, player):
-        if player.collide_right(self.attack_area) or player.collide_left(self.attack_area):
-            return True
-        return False
-
-    def attack(self, player):
-        if self.attack_animation_counter+1 > len(self.framesATTACK_l)-1:
-            if self.attack_connected(player):
-                player.take_damage(self.damage)
-            self.attack_animation_counter = 0
-            self.attacking = False
-
-    def fall(self, level, boost=0):
-        if self.falling:
-            if self.falling_momentum < 10:
-                self.falling_momentum = gravity * (pygame.time.get_ticks()-self.fell_at_time)*(1/500) + boost
-            else:
-                self.falling_momentum = 10
-            # print(f"fall function: {self.falling_momentum}, {self.hitbox.bottom+self.falling_momentum}")
-            if self.detect_bottom_collision(level, movement_y=self.falling_momentum):
-                self.fell_at_time = 0
-                self.fall_animation_counter = 0
-                self.falling = False
-                self.falling_momentum = 0
-            else:
-                self.pos.bottom += self.falling_momentum
-                self.hitbox.bottom += self.falling_momentum
-            self.update_hitbox()
-
-    def jump(self, level):
-        self.jumping_momentum = self.velocity[1] - self.jump_count*0.1
-        if self.jumping_momentum >= 0 and not(self.detect_top_collision(level, self.jumping_momentum)):
-            self.pos.bottom -= self.jumping_momentum
-            self.jump_count += 1
-        else:
-            self.jumping = False
-            self.jump_count = 0
-            if self.detect_top_collision(level, self.jumping_momentum):
-                self.fell_at_time = pygame.time.get_ticks()
-                self.falling = True
-                self.fall(level, boost=1)
-            self.jumping_momentum = 0
-            self.update_hitbox()
-
-    def draw_hitbox(self):
-        pygame.draw.rect(screen, rect=self.hitbox, color=(255, 0, 0), width=1)
-        pygame.draw.rect(screen, rect=self.attack_area, color=(100, 100, 0), width=1)
-        # pygame.draw.rect(screen, rect=self.pos, color=(255, 0, 0), width=1)
-

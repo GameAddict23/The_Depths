@@ -5,65 +5,6 @@ from Level import *
 from Fireball import Fireball
 
 @dataclass
-class Player():
-    velocity: list[float]
-    frames: list[list[pygame.Surface]]
-    name: str
-    width: int
-    height: int
-    starting_pos: tuple[float]
-    fly: bool
-
-    def __post_init__(self):
-        self.pos = pygame.Rect(self.starting_pos, (self.width, self.height))
-        self.direction = 0
-
-        self.label = standardFont.render(self.name, 1, (0, 0, 0))
-        self.dead = False
-        self.lastFrameSet = self.frames[0]
-        self.horizontalMovement = True
-
-    def move(self, shift, frame_counter: int, up=False, down=False, right=False, left=False):
-        if self.fly:
-            if up:
-                self.lastFrameSet = self.frames[0]
-                if self.pos.top - self.velocity[1] > 0:
-                    self.pos.top -= self.velocity[1]                                                # the top of the screen has a position value of 1,
-                                                                                                    # thus the value of our top position should decrease if we want to move up
-            if down:
-                self.lastFrameSet = self.frames[1]
-                if self.pos.bottom + self.velocity[1] < SCREEN_HEIGHT:
-                    if type(self.velocity[1]) == float: self.pos.bottom += (self.velocity[1]+1)
-                    else: self.pos.bottom += self.velocity[1]                                       # the bottom of the screen has a position value of the SCREEN_HEIGHT,
-
-        if shift >= 0 or shift <= -SCREEN_WIDTH:
-            self.horizontalMovement = True
-        else:
-            self.horizontalMovement = False
-                                                                                                    # thus the value of our bottom position should increase if we want to move down
-        if left:
-            self.lastFrameSet = self.frames[2]
-            if self.horizontalMovement and self.pos.left - self.velocity[0] > 0:
-                self.pos.left -= self.velocity[0]
-
-        if right:
-            self.lastFrameSet = self.frames[3]
-            if self.horizontalMovement and self.pos.right + self.velocity[0] < SCREEN_WIDTH:
-                if type(self.velocity[0]) == float: self.pos.right += (self.velocity[0]+1)
-                else: self.pos.right += self.velocity[0]
-
-        #draw name on top of NPC
-        screen.blit(self.label, (self.pos.x+10, self.pos.y-10))
-        #self.drawHitBox()
-
-        #showing NPC on screen
-        screen.blit(self.lastFrameSet[frame_counter], (self.pos.x, self.pos.y))
-
-    def drawHitBox(self):
-        pygame.draw.rect(screen, rect=self.pos, color=(0, 0, 0))
-
-##############################################################################################################################
-@dataclass
 class Revised():
     velocity: list[int]
     framesUP: list[pygame.Surface]
@@ -119,8 +60,6 @@ class Revised():
         self.scrolling_x = False
         self.scrolling_y = False
 
-        self.last_y = 0
-
         self.falling_momentum = 0
         self.jumping_momentum = 0
         self.jump_update_time = 0
@@ -128,6 +67,9 @@ class Revised():
         self.fell_at_time = 0
         self.count = 0
 
+        self.level = 0
+        self.exp = 0
+        self.exp_cap = 100
         self.unlocked_fireballs = False
         self.fireballs = {}
         self.fireball_limit = 2
@@ -140,22 +82,41 @@ class Revised():
         self.max_health = 200
         self.health = self.max_health
         self.damage = 50
-        self.health_bar_green = pygame.Rect((0, 0), (self.health, 15))
+
+        x, y = font_1.size(f"lvl.{self.level}")
+        self.hub_area = pygame.Surface((220, 60))
+        self.hub_area.set_alpha(126)
+        self.exp_bar = pygame.Rect((x+5, y/2), (100, 10))
+        self.exp_filled = pygame.Rect((x+5, y/2), ((self.exp/self.exp_cap)*self.exp_bar.width, 10))
+        self.health_bar_green = pygame.Rect((0, self.exp_bar.y+self.exp_bar.height+5), (self.health, 10))
         self.health_bar_red = pygame.Rect((self.health_bar_green.x, self.health_bar_green.y), (self.max_health, self.health_bar_green.height))
 
     def render_hud(self):
-        self.health_bar_green.width = self.health
-        # self.health_bar_red.width = 100-self.health_bar_green.width
-        # self.health_bar_red.x = self.health_bar_green.x+self.health_bar_green.width
+        pygame.draw.rect(self.hub_area, (0, 0, 0), pygame.Rect((0, 0), (220, 60)))
+        screen.blit(self.hub_area, (0, 0))
 
+        level = font_1.render(f"lvl.{self.level}", 1, (255, 255, 255))
+        x, y = font_1.size(f"lvl.{self.level}")
+        self.exp_bar.x, self.exp_bar.y = x+5, y/2
+        self.exp_filled.x, self.exp_filled.y = self.exp_bar.x, self.exp_bar.y
+
+        # height, width = font_1.size(str(self.level))
+        screen.blit(level, (0, 0))
+
+        self.exp_filled.width = (self.exp/self.exp_cap)*self.exp_bar.width
+        pygame.draw.rect(screen, (150, 150, 150), self.exp_bar)
+        pygame.draw.rect(screen, (255, 255, 255), self.exp_filled)
+
+        self.health_bar_green.width = self.health
         pygame.draw.rect(screen, (255, 0, 0), self.health_bar_red)
         pygame.draw.rect(screen, (0, 255, 0), self.health_bar_green)
 
-        count = 0
-        for key in self.fireballs.keys():
-            if self.fireballs[key] == 0:
-                pygame.draw.circle(screen, (255, 0, 0), (15+25*count, self.health_bar_green.height+15), 10)
-                count += 1
+        if self.unlocked_fireballs:
+            count = 0
+            for key in self.fireballs.keys():
+                if self.fireballs[key][0] == 0:
+                    pygame.draw.circle(screen, (255, 0, 0), (15+25*count, self.health_bar_green.height+15), 10)
+                    count += 1
 
     def return_to_start(self):
         self.pos.x, self.pos.y = self.starting_pos
@@ -295,8 +256,6 @@ class Revised():
             hitbox = level.hitboxes[key][0]
             if (hitbox.left <= self.hitbox.left+movement_x <= hitbox.right or hitbox.left <= self.hitbox.right+movement_x <= hitbox.right):
                 if hitbox.top <= self.hitbox.bottom+movement_y <= hitbox.center[1] or level.moving_tiles[key] and hitbox.top-1 <= self.hitbox.bottom+movement_y <= hitbox.center[1]:
-                    # print(hitbox.top <= self.hitbox.bottom <= hitbox.bottom, movement_y)
-                    # print("On ground!", self.hitbox.bottom, self.pos.bottom, hitbox.top, hitbox.bottom, [level.hitboxes.index(row), row.index(hitbox)])
                     self.hitbox.bottom = self.pos.bottom = hitbox.top
                     self.update_hitbox()
                     return True
@@ -357,12 +316,75 @@ class Revised():
                     return True
         return False
 
-    def move(self, level, shift_x, shift_y, right=False, left=False, jump=False, attack=False, fire=False, enemy_dict={}):
+    def take_damage(self, amount):
+        self.hit = True
+        self.last_updated_hit = pygame.time.get_ticks()
+        self.health -= amount
+        if self.health <= 0:
+            self.health = 0
+            self.dying = True
+
+    def die(self):
+        self.return_to_start()
+        self.dead = False
+        self.dying = False
+        self.dying_animation_counter = 0
+        self.health = self.max_health
+        self.kill_count = 0
+
+    def attack_connected(self, enemy):
+        if enemy.collide_right(self.attack_area, account_for_velocity=False) or enemy.collide_left(self.attack_area, account_for_velocity=False):
+            return True
+        return False
+
+    def fall(self, level, boost=0):
+        if self.falling:
+            if self.falling_momentum < 10:
+                self.falling_momentum = gravity * (pygame.time.get_ticks()-self.fell_at_time)*(1/500) + boost
+            else:
+                self.falling_momentum = 10
+            if self.detect_bottom_collision(level, movement_y=self.falling_momentum):
+                self.fell_at_time = 0
+                self.fall_animation_counter = 0
+                self.falling = False
+                self.falling_momentum = 0
+            elif not(self.scrolling_y):
+                self.pos.bottom += self.falling_momentum
+            self.update_hitbox()
+
+    def jump(self, level):
+        self.jumping_momentum = self.velocity[1] - self.jump_count*0.1
+        if self.jumping_momentum >= 0 and not(self.detect_top_collision(level, self.jumping_momentum)):
+            if not(self.scrolling_y):
+                self.pos.bottom -= self.jumping_momentum
+            self.jump_count += 1
+            self.jump_update_time = pygame.time.get_ticks()
+        else:
+            self.jumping = False
+            self.jump_update_time = 0
+            self.jump_count = 0
+            if self.detect_top_collision(level, self.jumping_momentum):
+                self.fell_at_time = pygame.time.get_ticks()
+                self.falling = True
+                self.fall(level, boost=1)
+            self.jumping_momentum = 0
+            self.update_hitbox()
+
+    def draw_hitbox(self):
+        pygame.draw.rect(screen, rect=self.attack_area, color=(0, 0, 255), width=1)
+        pygame.draw.rect(screen, rect=self.hitbox, color=(0, 255, 0), width=1)
+
+    def level_check(self):
+        if self.exp >= self.exp_cap:
+            self.level += 1
+            self.exp = 0
+            self.exp_cap += 100
+
+    def main(self, level, shift_x, shift_y, right=False, left=False, jump=False, attack=False, fire=False, enemy_dict={}):
         if self.dead:
             self.die()
 
-        if not(self.scrolling_y):
-            self.last_y = self.hitbox.y
+        self.level_check()
 
         if self.detect_bottom_collision(level) or self.falling and self.detect_bottom_collision(level, movement_y=self.falling_momentum):
             self.fell_at_time = 0
@@ -415,26 +437,29 @@ class Revised():
                     self.last_fired = pygame.time.get_ticks()
             elif self.attack_animation_counter+1 > len(self.framesATTACK_l)-1:
                 for key in enemy_dict.keys():
-                    if enemy_dict[key] != 0 and self.attack_connected(enemy_dict[key]):
+                    if enemy_dict[key] != 0 and not(enemy_dict[key].dying) and self.attack_connected(enemy_dict[key]):
                         enemy_dict[key].take_damage(self.damage)
+                        if enemy_dict[key].dying:
+                            self.exp += enemy_dict[key].exp_reward
                 self.attack_animation_counter = 0
                 self.attacking = False
                 self.last_attacked = pygame.time.get_ticks()
 
-        x = 0
         for fireball in self.fireballs.keys():
             if self.fireballs[fireball] != 0:
                 for enemy in enemy_dict.keys():
-                    if enemy_dict[enemy] != 0:
+                    if enemy_dict[enemy] != 0 and not(enemy_dict[enemy].dying):
                         if enemy_dict[enemy].collide_left(self.fireballs[fireball].hitbox, account_for_velocity=False) or enemy_dict[enemy].collide_right(self.fireballs[fireball].hitbox, account_for_velocity=False):
                             enemy_dict[enemy].take_damage(self.fireballs[fireball].damage)
+                            if enemy_dict[enemy].dying:
+                                self.exp += enemy_dict[key].exp_reward
                             self.fireballs[fireball].expired = True
                 if self.fireballs[fireball].expired:
                     self.fireballs[fireball] = 0
                 else:
                     self.fireballs[fireball].move(level, shift_x, shift_y)
 
-        self.isIdle = not(left or right) and not(self.attacking or self.jumping or self.falling or self.hit or self.dying)
+        self.isIdle = not(left or right or self.attacking or self.jumping or self.falling or self.hit or self.dying)
 
         if self.isIdle:
             self.walking_counter = 0
@@ -450,65 +475,3 @@ class Revised():
         self.animate()
 
         self.update_hitbox()
-
-    def take_damage(self, amount):
-        self.hit = True
-        self.last_updated_hit = pygame.time.get_ticks()
-        self.health -= amount
-        if self.health <= 0:
-            self.health = 0
-            self.dying = True
-
-    def die(self):
-        self.return_to_start()
-        self.dead = False
-        self.dying = False
-        self.dying_animation_counter = 0
-        self.health = self.max_health
-
-    def attack_connected(self, enemy):
-        if enemy.collide_right(self.attack_area, account_for_velocity=False) or enemy.collide_left(self.attack_area, account_for_velocity=False):
-            # print("ATTACKING")
-            return True
-        return False
-
-    # def attack(self, enemy):
-
-    def fall(self, level, boost=0):
-        if self.falling:
-            if self.falling_momentum < 10:
-                self.falling_momentum = gravity * (pygame.time.get_ticks()-self.fell_at_time)*(1/500) + boost
-            else:
-                self.falling_momentum = 10
-            # print(f"fall function: {self.falling_momentum}, {self.hitbox.bottom+self.falling_momentum}")
-            if self.detect_bottom_collision(level, movement_y=self.falling_momentum):
-                self.fell_at_time = 0
-                self.fall_animation_counter = 0
-                self.falling = False
-                self.falling_momentum = 0
-            elif not(self.scrolling_y):
-                self.pos.bottom += self.falling_momentum
-            self.update_hitbox()
-
-    def jump(self, level):
-        self.jumping_momentum = self.velocity[1] - self.jump_count*0.1
-        if self.jumping_momentum >= 0 and not(self.detect_top_collision(level, self.jumping_momentum)):
-            if not(self.scrolling_y):
-                self.pos.bottom -= self.jumping_momentum
-            self.jump_count += 1
-            self.jump_update_time = pygame.time.get_ticks()
-        else:
-            self.jumping = False
-            self.jump_update_time = 0
-            self.jump_count = 0
-            if self.detect_top_collision(level, self.jumping_momentum):
-                self.fell_at_time = pygame.time.get_ticks()
-                self.falling = True
-                self.fall(level, boost=1)
-            self.jumping_momentum = 0
-            self.update_hitbox()
-
-    def draw_hitbox(self):
-        pygame.draw.rect(screen, rect=self.attack_area, color=(0, 0, 255), width=1)
-        pygame.draw.rect(screen, rect=self.hitbox, color=(0, 255, 0), width=1)
-

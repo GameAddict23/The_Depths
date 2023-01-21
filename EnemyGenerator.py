@@ -14,8 +14,8 @@ def true_or_false():
 
 @dataclass
 class EnemyGenerator():
-    enemy_type: str
     pos: tuple[int]
+    enemy_type: str = ""
     limit: int = 10
     rate: int = 1000
 
@@ -34,6 +34,11 @@ class EnemyGenerator():
                 enemy = Skeleton(starting_pos=self.pos, left=true_or_false())
             case "goblin":
                 enemy = Goblin(starting_pos=self.pos, left=true_or_false())
+            case other:
+                if true_or_false():
+                    enemy = Skeleton(starting_pos=self.pos, left=true_or_false())
+                else:
+                    enemy = Goblin(starting_pos=self.pos, left=true_or_false())
         for key in self.enemies.keys():
             if self.enemies[key] == 0:
                 self.enemies[key] = enemy
@@ -49,5 +54,4 @@ class EnemyGenerator():
                 if self.enemies[key].dead:
                     self.enemies[key] = 0
                 else:
-                    self.enemies[key].move(level, shift_x, shift_y, player)
-
+                    self.enemies[key].main(level, shift_x, shift_y, player)
