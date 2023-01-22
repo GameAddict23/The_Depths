@@ -48,7 +48,7 @@ class Skeleton():
         self.hitbox = pygame.Rect((self.pos.x+self.offset_x, self.pos.y+self.offset_y), (self.width+self.offset_width, self.height+self.offset_height))
         self.attack_area = pygame.Rect((self.pos.x+self.offset_x, self.pos.y+self.offset_y), ((self.width+self.offset_width)*0.75, self.height+self.offset_height))
 
-        self.velocity = [2, 4]
+        self.velocity = [2, 3]
         self.framesLEFT = skeleton_walking_left
         self.framesRIGHT = skeleton_walking_right
         self.framesATTACK_l = skeleton_attacking_left
@@ -337,7 +337,7 @@ class Skeleton():
                         self.hitbox.left -= self.velocity[0]
                         self.left = True
                         self.idle_counter = 0
-                    elif not(self.jumping) or self.jump_count > 4:
+                    elif not(self.jumping or self.falling) or self.jump_count > 4:
                         if true_or_false():
                             self.jumping = True
                         else:
@@ -349,7 +349,7 @@ class Skeleton():
                         self.hitbox.right += self.velocity[0]
                         self.left = False
                         self.idle_counter = 0
-                    elif not(self.jumping):
+                    elif not(self.jumping or self.falling) or self.jump_count > 4:
                         if true_or_false():
                             self.jumping = True
                         else:
@@ -399,7 +399,7 @@ class Goblin():
         self.hitbox = pygame.Rect((self.pos.x+self.offset_x, self.pos.y+self.offset_y), (self.width+self.offset_width, self.height+self.offset_height))
         self.attack_area = pygame.Rect((self.pos.x+self.offset_x, self.pos.y+self.offset_y), ((self.width+self.offset_width)*0.75, self.height+self.offset_height))
 
-        self.velocity = [2, 4]
+        self.velocity = [4, 4]
         self.framesLEFT = goblin_walking_left
         self.framesRIGHT = goblin_walking_right
         self.framesATTACK_l = goblin_attacking_left
@@ -434,8 +434,8 @@ class Goblin():
         self.shift_x = 0
         self.shift_y = 0
 
-        self.health = 150
-        self.damage = 25
+        self.health = 100
+        self.damage = 10
 
     def die(self):
         if self.dead:
@@ -454,7 +454,7 @@ class Goblin():
         self.attack_area.y = self.hitbox.y
 
     def update_counter(self):
-        if pygame.time.get_ticks() - self.last_updated >= 100:
+        if pygame.time.get_ticks() - self.last_updated >= 80:
             if not(self.attacking) and not(self.isIdle) and not(self.hit):
                 if self.walking_counter+1 > len(self.framesLEFT)-1:
                     self.walking_counter = 0
@@ -689,7 +689,7 @@ class Goblin():
                         self.hitbox.left -= self.velocity[0]
                         self.left = True
                         self.idle_counter = 0
-                    elif not(self.jumping) or self.jump_count > 4:
+                    elif not(self.jumping or self.falling) or self.jump_count > 4:
                         if true_or_false():
                             self.jumping = True
                         else:
@@ -701,7 +701,7 @@ class Goblin():
                         self.hitbox.right += self.velocity[0]
                         self.left = False
                         self.idle_counter = 0
-                    elif not(self.jumping):
+                    elif not(self.jumping or self.falling) or self.jump_count > 4:
                         if true_or_false():
                             self.jumping = True
                         else:

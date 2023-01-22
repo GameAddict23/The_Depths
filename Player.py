@@ -69,54 +69,69 @@ class Revised():
 
         self.level = 0
         self.exp = 0
-        self.exp_cap = 100
+        self.exp_cap = 10
         self.unlocked_fireballs = False
         self.fireballs = {}
-        self.fireball_limit = 2
+        self.fireball_limit = 1
         for i in range(self.fireball_limit):
             self.fireballs[i] = 0
         self.fireball_cooldown = 1000
         self.last_fired = 0
         self.attack_cooldown = 200
         self.last_attacked = 0
-        self.max_health = 200
+        self.max_health = 100
         self.health = self.max_health
         self.damage = 50
 
         x, y = font_1.size(f"lvl.{self.level}")
-        self.hub_area = pygame.Surface((220, 60))
-        self.hub_area.set_alpha(126)
         self.exp_bar = pygame.Rect((x+5, y/2), (100, 10))
         self.exp_filled = pygame.Rect((x+5, y/2), ((self.exp/self.exp_cap)*self.exp_bar.width, 10))
-        self.health_bar_green = pygame.Rect((0, self.exp_bar.y+self.exp_bar.height+5), (self.health, 10))
+        self.health_bar_green = pygame.Rect((5, self.exp_bar.y+self.exp_bar.height+5), (self.health, 10))
         self.health_bar_red = pygame.Rect((self.health_bar_green.x, self.health_bar_green.y), (self.max_health, self.health_bar_green.height))
+        self.hub_area = pygame.Surface((300, 100))
+        self.hub_area.set_alpha(126)
+
+        self.message_sent = 0
 
     def render_hud(self):
-        pygame.draw.rect(self.hub_area, (0, 0, 0), pygame.Rect((0, 0), (220, 60)))
         screen.blit(self.hub_area, (0, 0))
+        pygame.draw.rect(screen, (255, 255, 255), self.hub_area.get_rect(), width=1)
 
         level = font_1.render(f"lvl.{self.level}", 1, (255, 255, 255))
         x, y = font_1.size(f"lvl.{self.level}")
-        self.exp_bar.x, self.exp_bar.y = x+5, y/2
+        self.exp_bar.x, self.exp_bar.y = x+5+5, y/2
         self.exp_filled.x, self.exp_filled.y = self.exp_bar.x, self.exp_bar.y
 
-        # height, width = font_1.size(str(self.level))
-        screen.blit(level, (0, 0))
+        screen.blit(level, (5, 0))
 
         self.exp_filled.width = (self.exp/self.exp_cap)*self.exp_bar.width
-        pygame.draw.rect(screen, (150, 150, 150), self.exp_bar)
-        pygame.draw.rect(screen, (255, 255, 255), self.exp_filled)
+        pygame.draw.rect(screen, (100, 100, 100), self.exp_bar)
+        pygame.draw.rect(screen, (100, 150, 255), self.exp_filled)
+        pygame.draw.rect(screen, (255, 255, 255), self.exp_bar, width=1)
 
         self.health_bar_green.width = self.health
         pygame.draw.rect(screen, (255, 0, 0), self.health_bar_red)
         pygame.draw.rect(screen, (0, 255, 0), self.health_bar_green)
+        pygame.draw.rect(screen, (255, 255, 255), self.health_bar_red, width=1)
 
         if self.unlocked_fireballs:
             count = 0
             for key in self.fireballs.keys():
-                if self.fireballs[key][0] == 0:
-                    pygame.draw.circle(screen, (255, 0, 0), (15+25*count, self.health_bar_green.height+15), 10)
+                if self.fireballs[key] == 0:
+                    pygame.draw.circle(screen, (255, 0, 0), (15+25*count, self.health_bar_red.bottom+15), 10)
                     count += 1
+
+    def send_message(self, message: str, limit: int):
+        if self.message_sent == 0:
+            return
+        elif pygame.time.get_ticks() - self.message_sent <= limit:
+            width, height = font_2.size(message)
+            message = font_2.render(message, 1, (255, 100, 100))
+
+            screen.blit(message, ((SCREEN_WIDTH-width)/2, 5+height))
+            return
+
+        self.message_sent = 0
 
     def return_to_start(self):
         self.pos.x, self.pos.y = self.starting_pos
@@ -328,9 +343,13 @@ class Revised():
         self.return_to_start()
         self.dead = False
         self.dying = False
+        self.left = False
         self.dying_animation_counter = 0
+        self.level = 0
+        self.max_health = 100
         self.health = self.max_health
-        self.kill_count = 0
+        self.health_bar_red.width = self.max_health
+        self.unlocked_fireballs = False
 
     def attack_connected(self, enemy):
         if enemy.collide_right(self.attack_area, account_for_velocity=False) or enemy.collide_left(self.attack_area, account_for_velocity=False):
@@ -374,17 +393,30 @@ class Revised():
         pygame.draw.rect(screen, rect=self.attack_area, color=(0, 0, 255), width=1)
         pygame.draw.rect(screen, rect=self.hitbox, color=(0, 255, 0), width=1)
 
-    def level_check(self):
+    def check_for_level_up(self):
         if self.exp >= self.exp_cap:
             self.level += 1
             self.exp = 0
-            self.exp_cap += 100
+            self.exp_cap += 10
+            self.max_health = 100+5*self.level
+            self.health = self.max_health
+            self.health_bar_red.width = self.max_health
+
+            if self.level == 1:
+                self.unlocked_fireballs = True
+                self.message_sent = pygame.time.get_ticks()
+            elif 3 <= self.level <= 4:
+                self.fireball_limit += 1
+                self.fireballs[self.fireball_limit-1] = 0
+                self.fireball_cooldown -= 10
 
     def main(self, level, shift_x, shift_y, right=False, left=False, jump=False, attack=False, fire=False, enemy_dict={}):
         if self.dead:
             self.die()
 
-        self.level_check()
+        self.check_for_level_up()
+
+        self.send_message("Fireballs unlocked! Press 1 to fire!", 2000)
 
         if self.detect_bottom_collision(level) or self.falling and self.detect_bottom_collision(level, movement_y=self.falling_momentum):
             self.fell_at_time = 0

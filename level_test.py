@@ -89,30 +89,41 @@ row = 12
 for i in range(4, 5):
     level_map[row][i] = 1
 
-row = 16
-for i in range(len(level_map[row])-3):
-    if not(56 <= i < 61):
-    # if not(14 <= i < 17):
-        level_map[row][i] = 1
-level_map[row][len(level_map[row])-3] = 2
-
-for i in range(14, 16):
+for i in range(15, 16):
     level_map[i][20] = 3
     level_map[i][50] = 3
 
-row = 24
+row = 16
 for i in range(len(level_map[row])-3):
-    if not(14 <= i < 17):
+    if not(56 <= i < 61 or 80 <= i < 82 or 84 <= i < 86):
         level_map[row][i] = 1
-
 level_map[row][len(level_map[row])-3] = 2
 
 row = 23
 for i in range(25, 35):
     level_map[row][i] = 3
 
+row = 24
+for i in range(len(level_map[row])-3):
+    if not(14 <= i < 17 or 90 <= i < 93):
+        level_map[row][i] = 1
+
+level_map[row][len(level_map[row])-3] = 2
+
 row = 40
 for i in range(10, 50):
+    level_map[row][i] = 1
+for i in range(55, 70):
+    level_map[row][i] = 1
+for i in range(75, 100):
+    level_map[row][i] = 1
+
+row = 50
+for i in range(0, 20):
+    level_map[row][i] = 1
+for i in range(26, 60):
+    level_map[row][i] = 1
+for i in range(65, 90):
     level_map[row][i] = 1
 
 dont_check: list[bool] = []
@@ -238,7 +249,7 @@ while run:
 
     level.render(draw_hitboxes=False)
     # draw_hitboxes()
-    player.main(level, shift_x, shift_y, right=keys[pygame.K_RIGHT], left=keys[pygame.K_LEFT], jump=keys[pygame.K_SPACE], attack=keys[pygame.K_a], fire=keys[pygame.K_f], enemy_dict=generator.enemies)
+    player.main(level, shift_x, shift_y, right=keys[pygame.K_RIGHT], left=keys[pygame.K_LEFT], jump=keys[pygame.K_SPACE], attack=keys[pygame.K_a], fire=keys[pygame.K_1], enemy_dict=generator.enemies)
 
     generator.main(level, shift_x, shift_y, player)
 
