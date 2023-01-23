@@ -4,6 +4,7 @@ from Level import Level
 from SpriteSheet import *
 from Player import Revised
 from EnemyGenerator import EnemyGenerator
+from Button import Button
 
 pygame.init()
 
@@ -200,7 +201,21 @@ player = Revised(
 
 generator = EnemyGenerator(limit=20, pos=(30*tile_width, 10*tile_height))
 
+def display_settings(self):
+    global pause
+    if self.clicked:
+        pause = not(pause)
+
+settings_button_icon = pygame.Surface((33, 31))
+settings_button_icon.blit(pygame.image.load("Icons/pixil-layer-1.png"), (0, 0), (33*2, 33*4, 33, 31))
+settings_button_icon_hover = pygame.Surface((33, 31))
+settings_button_icon_hover.blit(pygame.image.load("Icons/Golden.png"), (0, 0), (33*2, 33*4, 33, 31))
+settings_button = Button(icon_hover=settings_button_icon_hover, icon=settings_button_icon, width=33, height=31, pos=(SCREEN_WIDTH-33, 0), action=display_settings)
+settings_screen = font_1.render("Settings", 1, (255, 255, 255))
+settings_screen_size = font_1.size("Settings")
+
 run = True
+pause = False
 shift_x, shift_y = 0, 0
 while run:
     for event in pygame.event.get():
@@ -208,59 +223,68 @@ while run:
             case pygame.QUIT:
                 run = False
 
-    for x in range(int(SCREEN_HEIGHT/64)*2+2):
-        for i in range(2*int(SCREEN_WIDTH/64)+2):
-            screen.blit(background, (64*i+shift_x, 64*x+shift_y))
+    if not(pause):
+        for x in range(int(SCREEN_HEIGHT/64)*2+2):
+            for i in range(2*int(SCREEN_WIDTH/64)+2):
+                screen.blit(background, (64*i+shift_x, 64*x+shift_y))
 
-    for i in range(0, int(SCREEN_WIDTH/5), 2):
-        screen.blit(pillars, ((SCREEN_WIDTH/5)*i+shift_x, shift_y))
+        for i in range(0, int(SCREEN_WIDTH/5), 2):
+            screen.blit(pillars, ((SCREEN_WIDTH/5)*i+shift_x, shift_y))
 
-    keys = pygame.key.get_pressed()
+        keys = pygame.key.get_pressed()
 
-    if SCREEN_WIDTH*0.5 <= player.hitbox.center[0] <= SCREEN_WIDTH*0.6:
-        player.scrolling_x = not(shift_x+player.velocity[0] >= 0 or shift_x-player.velocity[0] <= -SCREEN_WIDTH)
-        if not(player.attacking):
-            if not(player.detect_right_collision(level)) and keys[pygame.K_RIGHT] and shift_x-player.velocity[0] >= -SCREEN_WIDTH:
-                shift_x -= player.velocity[0]
-            elif not(player.detect_left_collision(level)) and (keys[pygame.K_LEFT]) and shift_x+player.velocity[0] <= 0:
-                shift_x += player.velocity[0]
+        if SCREEN_WIDTH*0.5 <= player.hitbox.center[0] <= SCREEN_WIDTH*0.6:
+            player.scrolling_x = not(shift_x+player.velocity[0] >= 0 or shift_x-player.velocity[0] <= -SCREEN_WIDTH)
+            if not(player.attacking):
+                if not(player.detect_right_collision(level)) and keys[pygame.K_RIGHT] and shift_x-player.velocity[0] >= -SCREEN_WIDTH:
+                    shift_x -= player.velocity[0]
+                elif not(player.detect_left_collision(level)) and (keys[pygame.K_LEFT]) and shift_x+player.velocity[0] <= 0:
+                    shift_x += player.velocity[0]
+        else:
+            player.scrolling_x = False
+
+        if SCREEN_HEIGHT*0.5 <= player.hitbox.center[1] <= SCREEN_HEIGHT*0.6:
+            player.scrolling_y = not(shift_y >= 0 or shift_y <= -SCREEN_HEIGHT)
+            if player.falling:
+                if shift_y-player.falling_momentum >= -SCREEN_HEIGHT:
+                    shift_y -= player.falling_momentum
+                else:
+                    shift_y = -SCREEN_HEIGHT
+            elif player.jumping:
+                if shift_y+player.jumping_momentum <= 0:
+                    shift_y += player.jumping_momentum
+                else:
+                    shift_y = 0
+        else:
+            player.scrolling_y = False
+
+        move_tiles(0, 16, [i for i in range(14, 17)], (24*tile_height+5+shift_y, 17*tile_height+shift_y))
+        move_tiles(1, 40, [i for i in range(20, 25)], (55*tile_height+5+shift_y, 35*tile_height+shift_y))
+
+        level.update_hitboxes(shift_x, shift_y)
+
+        level.render(draw_hitboxes=False)
+        # draw_hitboxes()
+        player.main(level, shift_x, shift_y, right=keys[pygame.K_RIGHT], left=keys[pygame.K_LEFT], jump=keys[pygame.K_SPACE], attack=keys[pygame.K_a], fire=keys[pygame.K_1], enemy_dict=generator.enemies)
+
+        generator.main(level, shift_x, shift_y, player)
+
+        player.render_hud()
+        if player.dead:
+            shift_x = 0
+            shift_y = 0
+        elif keys[pygame.K_d]:
+            shift_x = 0
+            shift_y = 0
+            player.die()
     else:
-        player.scrolling_x = False
+        player.fell_at_time = pygame.time.get_ticks()
+        for key in generator.enemies.keys():
+            if generator.enemies[key] != 0:
+                generator.enemies[key].fell_at_time = pygame.time.get_ticks()
+        screen.blit(settings_screen, ((SCREEN_WIDTH-settings_screen_size[0])/2, (SCREEN_HEIGHT-settings_screen_size[1])/2))
 
-    if SCREEN_HEIGHT*0.5 <= player.hitbox.center[1] <= SCREEN_HEIGHT*0.6:
-        player.scrolling_y = not(shift_y >= 0 or shift_y <= -SCREEN_HEIGHT)
-        if player.falling:
-            if shift_y-player.falling_momentum >= -SCREEN_HEIGHT:
-                shift_y -= player.falling_momentum
-            else:
-                shift_y = -SCREEN_HEIGHT
-        elif player.jumping:
-            if shift_y+player.jumping_momentum <= 0:
-                shift_y += player.jumping_momentum
-            else:
-                shift_y = 0
-    else:
-        player.scrolling_y = False
-
-    move_tiles(0, 16, [i for i in range(14, 17)], (24*tile_height+5+shift_y, 17*tile_height+shift_y))
-    move_tiles(1, 40, [i for i in range(20, 25)], (55*tile_height+5+shift_y, 35*tile_height+shift_y))
-
-    level.update_hitboxes(shift_x, shift_y)
-
-    level.render(draw_hitboxes=False)
-    # draw_hitboxes()
-    player.main(level, shift_x, shift_y, right=keys[pygame.K_RIGHT], left=keys[pygame.K_LEFT], jump=keys[pygame.K_SPACE], attack=keys[pygame.K_a], fire=keys[pygame.K_1], enemy_dict=generator.enemies)
-
-    generator.main(level, shift_x, shift_y, player)
-
-    player.render_hud()
-    if player.dead:
-        shift_x = 0
-        shift_y = 0
-    elif keys[pygame.K_d]:
-        shift_x = 0
-        shift_y = 0
-        player.die()
+    settings_button.main()
 
     # draw_grid()
 
