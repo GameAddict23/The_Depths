@@ -8,6 +8,7 @@ SCREEN_SIZE = SCREEN_WIDTH, SCREEN_HEIGHT = 1600, 800
 screen = pygame.display.set_mode(SCREEN_SIZE)
 game_screen = pygame.Rect((0, 0), (SCREEN_WIDTH, SCREEN_HEIGHT))
 
+title_font = pygame.font.Font("Fonts/OptimusPrinceps.ttf", 40)
 font_1 = pygame.font.Font("Fonts/OptimusPrinceps.ttf", 30)
 font_2 = pygame.font.Font("Fonts/OptimusPrinceps.ttf", 25)
 # bigFont = pygame.font.SysFont("Timesnewroman", 60)
