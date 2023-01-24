@@ -201,21 +201,42 @@ player = Revised(
 
 generator = EnemyGenerator(limit=20, pos=(30*tile_width, 10*tile_height))
 
-def display_settings(self):
+def pause_game(self):
     global pause
     if self.clicked:
         pause = not(pause)
 
-settings_button_icon = pygame.Surface((33, 31))
-settings_button_icon.blit(pygame.image.load("Icons/pixil-layer-1.png"), (0, 0), (33*2, 33*4, 33, 31))
-settings_button_icon_hover = pygame.Surface((33, 31))
-settings_button_icon_hover.blit(pygame.image.load("Icons/Golden.png"), (0, 0), (33*2, 33*4, 33, 31))
-settings_button = Button(icon_hover=settings_button_icon_hover, icon=settings_button_icon, width=33, height=31, pos=(SCREEN_WIDTH-33, 0), action=display_settings)
-settings_screen = font_1.render("Settings", 1, (255, 255, 255))
-settings_screen_size = font_1.size("Settings")
+pause_button_icon = pygame.Surface((33, 31))
+pause_button_icon.blit(pygame.image.load("Icons/pixil-layer-1.png").convert_alpha(), (0, 0), (33*1, 33*5, 33, 31))
+pause_button_icon.set_colorkey((0, 0, 0))
+pause_button_icon_hover = pygame.Surface((33, 31))
+pause_button_icon_hover.blit(pygame.image.load("Icons/Golden.png").convert_alpha(), (0, 0), (33*1, 33*5, 33, 31))
+pause_button_icon_hover.set_colorkey((0, 0, 0))
+pause_button = Button(icon_hover=pause_button_icon_hover, icon=pause_button_icon, width=33, height=31, pos=(SCREEN_WIDTH-33, 0), action=pause_game)
+pause_screen = font_1.render("Paused", 1, (255, 255, 255))
+pause_screen_size = font_1.size("Paused")
+
+title = title_font.render("The Depths", 1, (255, 255, 255))
+title_size = title_font.size("The Depths")
+
+def start_game(self):
+    global start_screen, pause
+    if self.clicked:
+        start_screen = False
+        pause = False
+
+start_button_text = font_2.render("New Game", 1, (255, 255, 255))
+start_button_text_size = font_2.size("New Game")
+start_button_icon = pygame.Surface(start_button_text_size)
+start_button_icon.blit(start_button_text, (0, 0))
+start_button_icon_hover = pygame.Surface(start_button_text_size)
+pygame.draw.rect(start_button_icon_hover, rect=((0, 0), start_button_text_size), color=(50, 50, 50))
+start_button_icon_hover.blit(start_button_text, (0, 0))
+start_button = Button(icon_hover=start_button_icon_hover, icon=start_button_icon, width=start_button_text_size[0], height=start_button_text_size[1], pos=((SCREEN_WIDTH-start_button_text_size[0])/2, 100), action=start_game)
 
 run = True
 pause = False
+start_screen = True
 shift_x, shift_y = 0, 0
 while run:
     for event in pygame.event.get():
@@ -223,7 +244,10 @@ while run:
             case pygame.QUIT:
                 run = False
 
-    if not(pause):
+    if start_screen:
+        screen.blit(title, ((SCREEN_WIDTH-title_size[0])/2, 50))
+        start_button.main()
+    elif not(pause):
         for x in range(int(SCREEN_HEIGHT/64)*2+2):
             for i in range(2*int(SCREEN_WIDTH/64)+2):
                 screen.blit(background, (64*i+shift_x, 64*x+shift_y))
@@ -282,11 +306,10 @@ while run:
         for key in generator.enemies.keys():
             if generator.enemies[key] != 0:
                 generator.enemies[key].fell_at_time = pygame.time.get_ticks()
-        screen.blit(settings_screen, ((SCREEN_WIDTH-settings_screen_size[0])/2, (SCREEN_HEIGHT-settings_screen_size[1])/2))
+        screen.blit(pause_screen, ((SCREEN_WIDTH-pause_screen_size[0])/2, (SCREEN_HEIGHT-pause_screen_size[1])/2))
 
-    settings_button.main()
-
-    # draw_grid()
+    if not(start_screen):
+        pause_button.main()
 
     pygame.display.flip()
 
